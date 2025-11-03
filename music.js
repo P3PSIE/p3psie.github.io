@@ -123,10 +123,13 @@ function restoreDefaultPlaylist() {
 // Export playlist to JSON file
 function exportPlaylist() {
     const exportData = {
-        version: 1,
+        version: 2, // Increased version to include settings
         exportDate: new Date().toISOString(),
         playlist: playlist,
-        youtubeApiKey: getYouTubeApiKey() ? '***HIDDEN***' : null // Don't export actual key
+        settings: {
+            youtubeApiKey: getYouTubeApiKey() || null,
+            volume: volumeBar.value / 100 || 0.7
+        }
     };
 
     const dataStr = JSON.stringify(exportData, null, 2);
@@ -140,7 +143,7 @@ function exportPlaylist() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    alert(`Playlist exported! ${playlist.length} tracks saved.\n\nTransfer this file to your other device and import it there.`);
+    alert(`Playlist exported! ${playlist.length} tracks saved.\n\nIncludes:\n- Your playlist (${playlist.length} tracks)\n- YouTube API key\n- Volume preference\n\nTransfer this file to your other device and import it there.`);
 }
 
 // Import playlist from JSON file
@@ -163,11 +166,44 @@ function importPlaylist() {
                 }
 
                 const trackCount = importData.playlist.length;
-                const confirmMsg = `Import ${trackCount} tracks?\n\nThis will:\n- Replace your current playlist\n- Keep your current API key\n- Cannot be undone\n\nCurrent playlist: ${playlist.length} tracks`;
+                const hasSettings = importData.settings && importData.version >= 2;
+                const hasApiKey = hasSettings && importData.settings.youtubeApiKey;
+
+                let confirmMsg = `Import ${trackCount} tracks?\n\nThis will:\n- Replace your current playlist (${playlist.length} tracks)`;
+                if (hasApiKey) {
+                    confirmMsg += '\n- Restore your YouTube API key';
+                }
+                if (hasSettings) {
+                    confirmMsg += '\n- Restore volume and other settings';
+                }
+                confirmMsg += '\n- Cannot be undone';
 
                 if (confirm(confirmMsg)) {
+                    // Import playlist
                     playlist = importData.playlist;
                     savePlaylist();
+
+                    // Import settings if available
+                    if (hasSettings) {
+                        // Restore API key
+                        if (importData.settings.youtubeApiKey) {
+                            setYouTubeApiKey(importData.settings.youtubeApiKey);
+                        }
+
+                        // Restore volume
+                        if (importData.settings.volume !== undefined) {
+                            const volumePercent = importData.settings.volume * 100;
+                            volumeBar.value = volumePercent;
+                            localStorage.setItem('userVolume', importData.settings.volume.toString());
+
+                            // Apply volume to current player
+                            if (currentPlayerType === 'youtube' && youtubePlayer) {
+                                youtubePlayer.setVolume(volumePercent);
+                            } else if (currentPlayerType === 'local') {
+                                audio.volume = importData.settings.volume;
+                            }
+                        }
+                    }
 
                     // Reset playback
                     currentTrackIndex = 0;
@@ -187,7 +223,13 @@ function importPlaylist() {
                         loadTrack(0);
                     }
 
-                    alert(`Successfully imported ${trackCount} tracks!`);
+                    let successMsg = `Successfully imported ${trackCount} tracks!`;
+                    if (hasSettings) {
+                        successMsg += '\n\nSettings restored:';
+                        if (hasApiKey) successMsg += '\n✓ YouTube API key';
+                        if (importData.settings.volume !== undefined) successMsg += '\n✓ Volume preference';
+                    }
+                    alert(successMsg);
                 }
             } catch (error) {
                 console.error('Import error:', error);
@@ -683,6 +725,7 @@ function initYouTubePlayer() {
             height: '150',
             width: '150',
             videoId: '',
+            host: 'https://www.youtube-nocookie.com',  // Privacy-enhanced mode (may reduce ads)
             playerVars: {
                 'playsinline': 1,
                 'controls': 0,
@@ -691,7 +734,9 @@ function initYouTubePlayer() {
                 'iv_load_policy': 3,  // Hide annotations
                 'disablekb': 1,       // Disable keyboard controls (we handle them)
                 'fs': 0,              // Hide fullscreen button
-                'autohide': 1         // Auto-hide controls
+                'autohide': 1,        // Auto-hide controls
+                'autoplay': 0,        // Don't auto-start
+                'enablejsapi': 1      // Enable JS API
             },
             events: {
                 'onReady': onPlayerReady,
@@ -1065,6 +1110,8 @@ volumeBar.addEventListener('input', (e) => {
     } else if (currentPlayerType === 'local') {
         audio.volume = volume;
     }
+    // Save volume preference
+    localStorage.setItem('userVolume', volume.toString());
 });
 
 // Add track UI event handlers
@@ -1191,7 +1238,13 @@ sharePlaylistBtn.addEventListener('click', sharePlaylist);
 
 // Initialize
 loadPlaylistFromUrl(); // Check for shared playlist in URL
-audio.volume = 0.7;
+
+// Load saved volume or use default
+const savedVolume = localStorage.getItem('userVolume');
+const initialVolume = savedVolume ? parseFloat(savedVolume) : 0.7;
+audio.volume = initialVolume;
+volumeBar.value = initialVolume * 100;
+
 loadPlaylist(); // Load playlist from localStorage
 renderPlaylist();
 if (playlist.length > 0) {

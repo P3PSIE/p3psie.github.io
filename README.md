@@ -276,17 +276,27 @@ Your custom playlists are saved in your browser's localStorage, which means they
 **Export your playlist:**
 1. Click the **download icon** in the playlist section
 2. A JSON file will be downloaded (e.g., `music-hub-playlist-2025-01-15.json`)
-3. This file contains your entire playlist with all tracks and metadata
+3. This file contains:
+   - Your entire playlist with all tracks and metadata
+   - Your YouTube API key (so you don't need to re-enter it)
+   - Volume preference and other settings
 
 **Import a playlist:**
 1. Click the **upload icon** in the playlist section
 2. Select your previously exported JSON file
-3. Confirm the import - your playlist will be replaced with the imported one
+3. Confirm the import - your playlist and settings will be restored
+
+**What gets imported:**
+- ✅ All playlist tracks (replaces current playlist)
+- ✅ YouTube API key (if included in export)
+- ✅ Volume preference
+- ✅ Other user settings
 
 **Use cases:**
-- Transfer playlist from phone to desktop (or vice versa)
-- Backup your playlist before making changes
-- Share your entire playlist with friends via file sharing
+- Transfer everything from phone to desktop (or vice versa)
+- Backup your playlist and settings before making changes
+- Share your entire setup with friends via file sharing
+- Move to a new device without losing your configuration
 
 ### Method 2: Shareable URL
 
@@ -322,7 +332,8 @@ For advanced users, you can manually edit `music.js` to set default tracks that 
 - **Browser data**: Clearing browser data will delete your saved playlist (use export to backup!)
 - **Import replaces**: Importing a playlist replaces your current one (export first to backup)
 - **URL length**: Shareable URLs can be very long with large playlists (500+ tracks may exceed URL limits)
-- **API keys not exported**: For security, YouTube API keys are not included in exports
+- **API keys ARE exported**: YouTube API keys are included in JSON exports for convenience when moving between your devices. Keep exported files secure and don't share them publicly if you want to keep your API key private.
+- **Shareable URLs**: Don't include settings or API keys - only the playlist tracks
 
 ## Visualization
 
@@ -505,6 +516,13 @@ Edit `index.html` to change:
 - ⚠️ Videos may not be available in all regions
 - ⚠️ If a video is deleted from YouTube, it won't play
 
+**About YouTube Ads:**
+- ⚠️ **Ads cannot be completely blocked** - YouTube's API doesn't allow ad removal
+- ℹ️ We use privacy-enhanced mode (`youtube-nocookie.com`) which may reduce ads
+- ℹ️ Ads are controlled by video uploaders and YouTube's policies
+- 💡 **To avoid ads entirely**: Use local audio files instead of YouTube videos
+- 💡 **Alternative**: YouTube Premium users won't see ads
+
 ### For Local Files:
 - ✅ Keep file sizes reasonable (GitHub has repository size limits)
 - ✅ Use MP3 format for best compatibility and compression
@@ -539,6 +557,12 @@ Edit `index.html` to change:
 **Waveform not showing:**
 - For YouTube: This is expected if playback hasn't started
 - For local files: Make sure Web Audio API is supported in your browser
+
+**YouTube ads playing:**
+- This is expected behavior - YouTube ads cannot be blocked via the API
+- We use privacy-enhanced mode which may reduce (but not eliminate) ads
+- Ads are shown based on the video uploader's monetization settings
+- Solutions: Use local audio files (no ads) or YouTube Premium subscription
 
 ## Credits
 
