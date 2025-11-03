@@ -267,6 +267,63 @@ If you don't want to set up an API key:
 - Use [playlist.tools](https://playlist.tools/) to extract URLs
 - Paste all extracted URLs into the "Add Track" box
 
+## Cross-Device Playlist Sync
+
+Your custom playlists are saved in your browser's localStorage, which means they persist on the same device. To sync playlists across devices or share them with others, use one of these three methods:
+
+### Method 1: Export/Import Files
+
+**Export your playlist:**
+1. Click the **download icon** in the playlist section
+2. A JSON file will be downloaded (e.g., `music-hub-playlist-2025-01-15.json`)
+3. This file contains your entire playlist with all tracks and metadata
+
+**Import a playlist:**
+1. Click the **upload icon** in the playlist section
+2. Select your previously exported JSON file
+3. Confirm the import - your playlist will be replaced with the imported one
+
+**Use cases:**
+- Transfer playlist from phone to desktop (or vice versa)
+- Backup your playlist before making changes
+- Share your entire playlist with friends via file sharing
+
+### Method 2: Shareable URL
+
+**Generate a shareable link:**
+1. Click the **share icon** in the playlist section
+2. A special URL will be copied to your clipboard
+3. Share this URL with anyone or save it for yourself
+
+**How it works:**
+- The URL contains your entire playlist encoded in base64
+- Anyone with the URL can instantly load your playlist
+- No file downloads required - just paste and go!
+- The URL can be quite long if your playlist is large
+
+**Example shareable URL:**
+```
+https://yoursite.com/music.html?playlist=eyJ2IjoxLCJwIjpbeyJ0IjoiU29uZy4uLg==
+```
+
+**Use cases:**
+- Quick sharing on social media or messaging apps
+- Bookmark your playlist for easy access
+- No need to download/upload files
+
+### Method 3: Manual Playlist Editing
+
+For advanced users, you can manually edit `music.js` to set default tracks that load for all users.
+
+### Important Notes:
+
+- **LocalStorage is per-browser**: Playlists saved in Chrome won't appear in Firefox on the same device
+- **Private browsing**: Playlists may not persist in incognito/private mode
+- **Browser data**: Clearing browser data will delete your saved playlist (use export to backup!)
+- **Import replaces**: Importing a playlist replaces your current one (export first to backup)
+- **URL length**: Shareable URLs can be very long with large playlists (500+ tracks may exceed URL limits)
+- **API keys not exported**: For security, YouTube API keys are not included in exports
+
 ## Visualization
 
 - **Local Files**: Real-time audio frequency analysis using Web Audio API

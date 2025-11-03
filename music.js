@@ -120,6 +120,185 @@ function restoreDefaultPlaylist() {
     }
 }
 
+// Export playlist to JSON file
+function exportPlaylist() {
+    const exportData = {
+        version: 1,
+        exportDate: new Date().toISOString(),
+        playlist: playlist,
+        youtubeApiKey: getYouTubeApiKey() ? '***HIDDEN***' : null // Don't export actual key
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `music-hub-playlist-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert(`Playlist exported! ${playlist.length} tracks saved.\n\nTransfer this file to your other device and import it there.`);
+}
+
+// Import playlist from JSON file
+function importPlaylist() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importData = JSON.parse(event.target.result);
+
+                if (!importData.version || !importData.playlist) {
+                    throw new Error('Invalid playlist file format');
+                }
+
+                const trackCount = importData.playlist.length;
+                const confirmMsg = `Import ${trackCount} tracks?\n\nThis will:\n- Replace your current playlist\n- Keep your current API key\n- Cannot be undone\n\nCurrent playlist: ${playlist.length} tracks`;
+
+                if (confirm(confirmMsg)) {
+                    playlist = importData.playlist;
+                    savePlaylist();
+
+                    // Reset playback
+                    currentTrackIndex = 0;
+                    if (isPlaying) {
+                        if (currentPlayerType === 'youtube' && youtubePlayer) {
+                            youtubePlayer.stopVideo();
+                        } else if (currentPlayerType === 'local') {
+                            audio.pause();
+                        }
+                        isPlaying = false;
+                        playIcon.style.display = 'block';
+                        pauseIcon.style.display = 'none';
+                    }
+
+                    renderPlaylist();
+                    if (playlist.length > 0) {
+                        loadTrack(0);
+                    }
+
+                    alert(`Successfully imported ${trackCount} tracks!`);
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                alert('Failed to import playlist. Please check the file format.');
+            }
+        };
+
+        reader.readAsText(file);
+    };
+
+    input.click();
+}
+
+// Generate shareable URL with playlist
+function getShareableUrl() {
+    try {
+        const shareData = {
+            v: 1, // version
+            p: playlist.map(track => ({
+                t: track.title,
+                a: track.artist,
+                c: track.credit,
+                type: track.type,
+                ...(track.type === 'youtube' ? { yt: track.youtubeId } : { f: track.file })
+            }))
+        };
+
+        const encoded = btoa(JSON.stringify(shareData));
+        const url = new URL(window.location.href);
+        url.searchParams.set('playlist', encoded);
+
+        return url.toString();
+    } catch (error) {
+        console.error('Error generating shareable URL:', error);
+        return null;
+    }
+}
+
+// Copy shareable URL to clipboard
+async function sharePlaylist() {
+    const url = getShareableUrl();
+
+    if (!url) {
+        alert('Failed to generate shareable link');
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(url);
+        alert(`Shareable link copied to clipboard!\n\n${playlist.length} tracks included.\n\nAnyone with this link can load your playlist.`);
+    } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            alert(`Shareable link copied!\n\n${playlist.length} tracks included.`);
+        } catch (err) {
+            prompt('Copy this link manually:', url);
+        }
+        document.body.removeChild(textArea);
+    }
+}
+
+// Load playlist from URL parameter
+function loadPlaylistFromUrl() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const playlistParam = urlParams.get('playlist');
+
+        if (playlistParam) {
+            const decoded = JSON.parse(atob(playlistParam));
+
+            if (decoded.v === 1 && decoded.p && Array.isArray(decoded.p)) {
+                const importedPlaylist = decoded.p.map(track => ({
+                    title: track.t,
+                    artist: track.a,
+                    credit: track.c || '',
+                    type: track.type,
+                    ...(track.type === 'youtube' ? { youtubeId: track.yt } : { file: track.f }),
+                    isDefault: false
+                }));
+
+                const trackCount = importedPlaylist.length;
+                const confirmMsg = `Load shared playlist with ${trackCount} tracks?\n\nThis will replace your current playlist.`;
+
+                if (confirm(confirmMsg)) {
+                    playlist = importedPlaylist;
+                    savePlaylist();
+                    renderPlaylist();
+                    if (playlist.length > 0) {
+                        loadTrack(0);
+                    }
+
+                    // Clean URL
+                    const cleanUrl = window.location.origin + window.location.pathname;
+                    window.history.replaceState({}, document.title, cleanUrl);
+
+                    alert(`Loaded ${trackCount} tracks from shared link!`);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading playlist from URL:', error);
+    }
+}
+
 // Fetch playlist videos from YouTube API
 async function fetchPlaylistVideos(playlistId) {
     const apiKey = getYouTubeApiKey();
@@ -411,9 +590,21 @@ function removeTrack(index) {
     savePlaylist();
     renderPlaylist();
 
-    // Load new current track if we removed the playing one
-    if (index === currentTrackIndex && playlist.length > 0) {
+    // Only auto-load next track if we removed a different track (not the currently playing one)
+    // If user deleted the playing track, they probably want to stop, so don't auto-play next
+    if (playlist.length > 0 && currentTrackIndex < playlist.length && index !== currentTrackIndex) {
+        // Just update the display, don't auto-play
         loadTrack(currentTrackIndex);
+    } else if (playlist.length > 0) {
+        // Track was playing when deleted - load but don't play the new current track
+        const wasPlaying = isPlaying;
+        loadTrack(currentTrackIndex);
+        if (wasPlaying) {
+            // Keep it paused
+            isPlaying = false;
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+        }
     }
 }
 
@@ -496,7 +687,11 @@ function initYouTubePlayer() {
                 'playsinline': 1,
                 'controls': 0,
                 'modestbranding': 1,
-                'rel': 0
+                'rel': 0,
+                'iv_load_policy': 3,  // Hide annotations
+                'disablekb': 1,       // Disable keyboard controls (we handle them)
+                'fs': 0,              // Hide fullscreen button
+                'autohide': 1         // Auto-hide controls
             },
             events: {
                 'onReady': onPlayerReady,
@@ -985,7 +1180,17 @@ apiKeyBtn.addEventListener('click', () => {
 const restoreDefaultsBtn = document.getElementById('restore-defaults-btn');
 restoreDefaultsBtn.addEventListener('click', restoreDefaultPlaylist);
 
+// Export/Import/Share buttons
+const exportPlaylistBtn = document.getElementById('export-playlist-btn');
+const importPlaylistBtn = document.getElementById('import-playlist-btn');
+const sharePlaylistBtn = document.getElementById('share-playlist-btn');
+
+exportPlaylistBtn.addEventListener('click', exportPlaylist);
+importPlaylistBtn.addEventListener('click', importPlaylist);
+sharePlaylistBtn.addEventListener('click', sharePlaylist);
+
 // Initialize
+loadPlaylistFromUrl(); // Check for shared playlist in URL
 audio.volume = 0.7;
 loadPlaylist(); // Load playlist from localStorage
 renderPlaylist();
