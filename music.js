@@ -92,6 +92,65 @@ function loadPlaylist() {
     }
 }
 
+// Save playback state for resuming later
+function savePlaybackState() {
+    try {
+        const state = {
+            trackIndex: currentTrackIndex,
+            isPlaying: isPlaying,
+            currentTime: getCurrentTime(),
+            timestamp: Date.now()
+        };
+        localStorage.setItem('playbackState', JSON.stringify(state));
+    } catch (e) {
+        console.error('Error saving playback state:', e);
+    }
+}
+
+// Load playback state
+function loadPlaybackState() {
+    try {
+        const saved = localStorage.getItem('playbackState');
+        if (saved) {
+            const state = JSON.parse(saved);
+            // Only restore if saved within last 24 hours
+            if (Date.now() - state.timestamp < 24 * 60 * 60 * 1000) {
+                return state;
+            }
+        }
+    } catch (e) {
+        console.error('Error loading playback state:', e);
+    }
+    return null;
+}
+
+// Get current playback time
+function getCurrentTime() {
+    if (currentPlayerType === 'youtube' && youtubePlayer) {
+        try {
+            return youtubePlayer.getCurrentTime() || 0;
+        } catch (e) {
+            return 0;
+        }
+    } else if (currentPlayerType === 'local') {
+        return audio.currentTime || 0;
+    }
+    return 0;
+}
+
+// Set playback time
+function setCurrentTime(time) {
+    if (currentPlayerType === 'youtube' && youtubePlayer) {
+        try {
+            youtubePlayer.seekTo(time, true);
+        } catch (e) {
+            console.error('Error seeking YouTube:', e);
+        }
+    } else if (currentPlayerType === 'local') {
+        audio.currentTime = time;
+    }
+}
+
 function restoreDefaultPlaylist() {
     if (confirm('Restore default tracks and remove all custom additions?\n\nThis will:\n- Bring back default example tracks\n- Remove all tracks you added\n- Cannot be undone')) {
         localStorage.removeItem('userPlaylist');
@@ -657,6 +716,7 @@ let currentPlayerType = null; // 'youtube' or 'local'
 let youtubePlayer = null;
 let youtubeReady = false;
 let progressUpdateInterval = null;
+let wakeLock = null; // Wake Lock API for preventing screen sleep
 
 // DOM elements
 const audio = document.getElementById('audio-player');
@@ -688,6 +748,66 @@ let animationId;
 // Simulated data for YouTube visualization
 let simulatedData = new Uint8Array(128);
 let simulatedPhase = 0;
+
+// Wake Lock API - Prevents screen from sleeping during playback
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock activated');
+
+            wakeLock.addEventListener('release', () => {
+                console.log('Wake Lock released');
+            });
+        }
+    } catch (err) {
+        console.log('Wake Lock error:', err);
+    }
+}
+
+async function releaseWakeLock() {
+    if (wakeLock) {
+        try {
+            await wakeLock.release();
+            wakeLock = null;
+        } catch (err) {
+            console.log('Wake Lock release error:', err);
+        }
+    }
+}
+
+// Re-acquire wake lock when page becomes visible again
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+        if (wakeLock !== null && isPlaying) {
+            await requestWakeLock();
+        }
+    } else {
+        // Save state when page becomes hidden
+        savePlaybackState();
+    }
+});
+
+// Save state when page is about to close
+window.addEventListener('beforeunload', () => {
+    savePlaybackState();
+});
+
+// Save state when page loses focus
+window.addEventListener('blur', () => {
+    savePlaybackState();
+});
+
+// Handle page freeze/resume (for mobile browsers)
+document.addEventListener('freeze', () => {
+    savePlaybackState();
+});
+
+document.addEventListener('resume', () => {
+    if (isPlaying) {
+        requestWakeLock();
+    }
+});
 
 // Initialize canvas size
 function resizeCanvas() {
@@ -761,6 +881,7 @@ function onPlayerStateChange(event) {
         drawSimulatedWaveform();
         vinylSpin.style.animationPlayState = 'running';
         updateMediaSession(); // Update lock screen controls
+        requestWakeLock(); // Keep screen active during playback
     } else if (event.data === YT.PlayerState.PAUSED) {
         isPlaying = false;
         playIcon.style.display = 'block';
@@ -769,10 +890,13 @@ function onPlayerStateChange(event) {
         cancelAnimationFrame(animationId);
         vinylSpin.style.animationPlayState = 'paused';
         updateMediaSession(); // Update lock screen controls
+        releaseWakeLock(); // Release wake lock when paused
+        savePlaybackState(); // Save state when pausing
     }
 }
 
 // Progress update for YouTube
+let lastStateSave = 0;
 function startProgressUpdate() {
     stopProgressUpdate();
     progressUpdateInterval = setInterval(() => {
@@ -784,6 +908,13 @@ function startProgressUpdate() {
                 progressBar.value = progress;
                 currentTimeEl.textContent = formatTime(currentTime);
                 durationEl.textContent = formatTime(duration);
+
+                // Save state every 5 seconds
+                const now = Date.now();
+                if (now - lastStateSave > 5000) {
+                    savePlaybackState();
+                    lastStateSave = now;
+                }
             }
         }
     }, 100);
@@ -925,7 +1056,7 @@ function renderPlaylist() {
 }
 
 // Load track
-function loadTrack(index) {
+function loadTrack(index, restoreTime = null) {
     currentTrackIndex = index;
     const track = playlist[currentTrackIndex];
 
@@ -960,6 +1091,10 @@ function loadTrack(index) {
             if (isPlaying) {
                 youtubePlayer.playVideo();
             }
+            // Restore playback position if provided
+            if (restoreTime !== null && restoreTime > 0) {
+                setTimeout(() => setCurrentTime(restoreTime), 1000);
+            }
         } else {
             // Wait for YouTube API to load
             const checkReady = setInterval(() => {
@@ -975,6 +1110,10 @@ function loadTrack(index) {
                             if (isPlaying) {
                                 youtubePlayer.playVideo();
                             }
+                            // Restore playback position if provided
+                            if (restoreTime !== null && restoreTime > 0) {
+                                setTimeout(() => setCurrentTime(restoreTime), 1000);
+                            }
                         }
                     }, 500);
                 }
@@ -987,6 +1126,13 @@ function loadTrack(index) {
         audio.src = track.file;
         audio.style.display = 'block';
 
+        // Restore playback position if provided
+        if (restoreTime !== null && restoreTime > 0) {
+            audio.addEventListener('loadedmetadata', () => {
+                setCurrentTime(restoreTime);
+            }, { once: true });
+        }
+
         if (isPlaying) {
             audio.play().catch(err => console.log('Playback error:', err));
         }
@@ -994,6 +1140,7 @@ function loadTrack(index) {
 
     renderPlaylist();
     updateMediaSession(); // Update lock screen controls
+    savePlaybackState(); // Save state when changing tracks
 }
 
 // Play/Pause toggle
@@ -1016,6 +1163,8 @@ function togglePlay() {
             pauseIcon.style.display = 'none';
             cancelAnimationFrame(animationId);
             vinylSpin.style.animationPlayState = 'paused';
+            releaseWakeLock(); // Release wake lock when paused
+            savePlaybackState(); // Save state when pausing
         } else {
             audio.play().catch(err => {
                 console.log('Playback error:', err);
@@ -1026,6 +1175,7 @@ function togglePlay() {
             pauseIcon.style.display = 'block';
             drawWaveform();
             vinylSpin.style.animationPlayState = 'running';
+            requestWakeLock(); // Keep screen active during playback
         }
         updateMediaSession(); // Update lock screen controls
     }
@@ -1067,6 +1217,13 @@ audio.addEventListener('timeupdate', () => {
         const progress = (audio.currentTime / audio.duration) * 100;
         progressBar.value = progress;
         currentTimeEl.textContent = formatTime(audio.currentTime);
+
+        // Save state every 5 seconds
+        const now = Date.now();
+        if (now - lastStateSave > 5000) {
+            savePlaybackState();
+            lastStateSave = now;
+        }
     }
 });
 
@@ -1081,12 +1238,23 @@ audio.addEventListener('ended', nextTrack);
 audio.addEventListener('play', () => {
     if (currentPlayerType === 'local') {
         vinylSpin.style.animationPlayState = 'running';
+        isPlaying = true;
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+        requestWakeLock();
+        updateMediaSession();
     }
 });
 
 audio.addEventListener('pause', () => {
     if (currentPlayerType === 'local') {
         vinylSpin.style.animationPlayState = 'paused';
+        isPlaying = false;
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+        releaseWakeLock();
+        updateMediaSession();
+        savePlaybackState();
     }
 });
 
@@ -1247,9 +1415,22 @@ volumeBar.value = initialVolume * 100;
 
 loadPlaylist(); // Load playlist from localStorage
 renderPlaylist();
-if (playlist.length > 0) {
+
+// Restore playback state if available
+const savedState = loadPlaybackState();
+if (savedState && playlist.length > 0 && savedState.trackIndex < playlist.length) {
+    // Restore the track and position
+    currentTrackIndex = savedState.trackIndex;
+    loadTrack(currentTrackIndex, savedState.currentTime);
+
+    // Don't auto-play, just restore the position
+    // User can manually play if they want
+    console.log(`Restored playback: Track ${currentTrackIndex + 1}, Position ${Math.floor(savedState.currentTime)}s`);
+} else if (playlist.length > 0) {
+    // No saved state, just load first track
     loadTrack(0);
 }
+
 updateApiKeyButtonState(); // Update API key button visual state
 
 // Draw initial static waveform

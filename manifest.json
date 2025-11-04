@@ -2,11 +2,13 @@
   "name": "Music Hub",
   "short_name": "Music Hub",
   "description": "Modern music player with YouTube integration and offline support",
-  "start_url": "/",
+  "start_url": "/music.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0a0a19",
   "theme_color": "#8b5cf6",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "https://via.placeholder.com/192x192.png?text=🎵",
@@ -22,5 +24,23 @@
     }
   ],
   "categories": ["music", "entertainment"],
-  "screenshots": []
+  "screenshots": [],
+  "display_override": ["standalone", "minimal-ui"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "shortcuts": [
+    {
+      "name": "Music Player",
+      "short_name": "Play",
+      "description": "Open the music player",
+      "url": "/music.html",
+      "icons": [
+        {
+          "src": "https://via.placeholder.com/96x96.png?text=▶️",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
 }
