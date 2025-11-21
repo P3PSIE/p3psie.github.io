@@ -1,15 +1,11 @@
-// Service Worker for offline caching and offline audio playback
-const CACHE_NAME = 'music-hub-v5';
-const AUDIO_CACHE = 'music-hub-audio-v5';
+// Service Worker for Flares - Offline support
+const CACHE_NAME = 'flares-v1';
 
 const urlsToCache = [
     '/',
     '/index.html',
-    '/music.html',
-    '/flares.html',
     '/styles.css',
     '/flares.css',
-    '/music.js',
     '/flares.js',
     '/manifest.json'
 ];
@@ -27,34 +23,6 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - serve from cache when offline
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-
-    // Handle audio files separately for offline listening
-    if (url.pathname.startsWith('/music/') &&
-        (url.pathname.endsWith('.mp3') || url.pathname.endsWith('.wav') || url.pathname.endsWith('.ogg'))) {
-
-        event.respondWith(
-            caches.open(AUDIO_CACHE).then((cache) => {
-                return cache.match(event.request).then((response) => {
-                    // Return cached audio if available
-                    if (response) {
-                        return response;
-                    }
-
-                    // Fetch and cache audio file
-                    return fetch(event.request).then((response) => {
-                        if (response && response.status === 200) {
-                            cache.put(event.request, response.clone());
-                        }
-                        return response;
-                    });
-                });
-            })
-        );
-        return;
-    }
-
-    // Handle other resources
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
@@ -78,7 +46,7 @@ self.addEventListener('fetch', (event) => {
                     // Cache the fetched resource
                     caches.open(CACHE_NAME)
                         .then((cache) => {
-                            // Only cache same-origin requests (not YouTube API, etc.)
+                            // Only cache same-origin requests
                             if (event.request.url.startsWith(self.location.origin)) {
                                 cache.put(event.request, responseToCache);
                             }
@@ -92,7 +60,7 @@ self.addEventListener('fetch', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-    const cacheWhitelist = [CACHE_NAME, AUDIO_CACHE];
+    const cacheWhitelist = [CACHE_NAME];
 
     event.waitUntil(
         caches.keys().then((cacheNames) => {
