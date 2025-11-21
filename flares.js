@@ -702,6 +702,116 @@ function initApp() {
         }
     });
 
+    // Custom Emojis Management
+    document.getElementById('manageCustomEmojisBtn').addEventListener('click', () => {
+        renderCustomEmojisList();
+        ScreenManager.showModal('customEmojisModal');
+    });
+
+    document.getElementById('closeCustomEmojis').addEventListener('click', () => {
+        ScreenManager.hideModal('customEmojisModal');
+    });
+
+    document.getElementById('addCustomEmojiBtn').addEventListener('click', () => {
+        // Reset form
+        document.getElementById('selectedEmojiDisplay').textContent = 'Tap to select emoji';
+        document.getElementById('selectedEmojiDisplay').dataset.emoji = '';
+        document.getElementById('emojiLabelInput').value = '';
+        document.querySelectorAll('.emoji-color-cb').forEach(cb => cb.checked = false);
+
+        ScreenManager.showModal('addEmojiModal');
+    });
+
+    document.getElementById('closeAddEmoji').addEventListener('click', () => {
+        ScreenManager.hideModal('addEmojiModal');
+    });
+
+    document.getElementById('cancelAddEmoji').addEventListener('click', () => {
+        ScreenManager.hideModal('addEmojiModal');
+    });
+
+    document.getElementById('emojiPickerBtn').addEventListener('click', () => {
+        renderEmojiPicker();
+        ScreenManager.showModal('emojiPickerModal');
+    });
+
+    document.getElementById('closeEmojiPicker').addEventListener('click', () => {
+        ScreenManager.hideModal('emojiPickerModal');
+    });
+
+    document.getElementById('saveCustomEmoji').addEventListener('click', () => {
+        const emojiDisplay = document.getElementById('selectedEmojiDisplay');
+        const emoji = emojiDisplay.dataset.emoji;
+        const label = document.getElementById('emojiLabelInput').value.trim();
+        const selectedColors = Array.from(document.querySelectorAll('.emoji-color-cb:checked'))
+            .map(cb => cb.value);
+
+        if (!emoji) {
+            alert('Please select an emoji');
+            return;
+        }
+
+        if (!label) {
+            alert('Please enter a feeling/emotion label');
+            return;
+        }
+
+        if (selectedColors.length === 0) {
+            alert('Please select at least one mood color');
+            return;
+        }
+
+        CustomEmojiManager.addCustomEmoji(emoji, label, selectedColors);
+        ScreenManager.hideModal('addEmojiModal');
+        renderCustomEmojisList();
+    });
+
+    // Custom Triggers Management
+    document.getElementById('manageCustomTriggersBtn').addEventListener('click', () => {
+        renderCustomTriggersList();
+        ScreenManager.showModal('customTriggersModal');
+    });
+
+    document.getElementById('closeCustomTriggers').addEventListener('click', () => {
+        ScreenManager.hideModal('customTriggersModal');
+    });
+
+    document.getElementById('addCustomTriggerBtn').addEventListener('click', () => {
+        // Reset form
+        document.getElementById('triggerLabelInput').value = '';
+        document.querySelectorAll('input[name="triggerCategory"]').forEach(r => r.checked = false);
+
+        ScreenManager.showModal('addTriggerModal');
+    });
+
+    document.getElementById('closeAddTrigger').addEventListener('click', () => {
+        ScreenManager.hideModal('addTriggerModal');
+    });
+
+    document.getElementById('cancelAddTrigger').addEventListener('click', () => {
+        ScreenManager.hideModal('addTriggerModal');
+    });
+
+    document.getElementById('saveCustomTrigger').addEventListener('click', () => {
+        const label = document.getElementById('triggerLabelInput').value.trim();
+        const categoryInput = document.querySelector('input[name="triggerCategory"]:checked');
+
+        if (!label) {
+            alert('Please enter a trigger/reason');
+            return;
+        }
+
+        if (!categoryInput) {
+            alert('Please select a category');
+            return;
+        }
+
+        const category = categoryInput.value;
+        CustomTriggerManager.addCustomTrigger(label, category);
+        ScreenManager.hideModal('addTriggerModal');
+        renderCustomTriggersList();
+    });
+
     // Close modals on outside click
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
@@ -710,6 +820,91 @@ function initApp() {
             }
         });
     });
+}
+
+// Helper function to render custom emojis list
+function renderCustomEmojisList() {
+    const list = document.getElementById('customEmojisList');
+    const customEmojis = CustomEmojiManager.getCustomEmojis();
+
+    if (customEmojis.length === 0) {
+        list.innerHTML = '<p class="empty-state">No custom emojis yet. Add your own!</p>';
+        return;
+    }
+
+    list.innerHTML = customEmojis.map(emoji => {
+        const colorDots = emoji.associatedColors.map(color => {
+            const colorMap = { green: '#10b981', orange: '#f59e0b', red: '#ef4444' };
+            return `<span class="color-dot" style="background: ${colorMap[color]}"></span>`;
+        }).join('');
+
+        return `
+            <div class="custom-item">
+                <span class="custom-emoji">${emoji.emoji}</span>
+                <div class="custom-info">
+                    <span class="custom-label">${emoji.label}</span>
+                    <div class="custom-colors">${colorDots}</div>
+                </div>
+                <button class="btn-icon-delete" data-id="${emoji.id}" onclick="deleteCustomEmoji(${emoji.id})">×</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Helper function to render emoji picker
+function renderEmojiPicker() {
+    const grid = document.getElementById('emojiPickerGrid');
+    grid.innerHTML = COMMON_EMOJIS.map(emoji => `
+        <button class="emoji-picker-item" onclick="selectEmoji('${emoji}')">${emoji}</button>
+    `).join('');
+}
+
+// Helper function to select emoji from picker
+function selectEmoji(emoji) {
+    document.getElementById('selectedEmojiDisplay').textContent = emoji;
+    document.getElementById('selectedEmojiDisplay').dataset.emoji = emoji;
+    ScreenManager.hideModal('emojiPickerModal');
+}
+
+// Helper function to delete custom emoji
+function deleteCustomEmoji(id) {
+    if (confirm('Are you sure you want to delete this custom emoji?')) {
+        CustomEmojiManager.deleteCustomEmoji(id);
+        renderCustomEmojisList();
+    }
+}
+
+// Helper function to render custom triggers list
+function renderCustomTriggersList() {
+    const list = document.getElementById('customTriggersList');
+    const customTriggers = CustomTriggerManager.getCustomTriggers();
+
+    if (customTriggers.length === 0) {
+        list.innerHTML = '<p class="empty-state">No custom triggers yet. Add your own!</p>';
+        return;
+    }
+
+    list.innerHTML = customTriggers.map(trigger => {
+        const categoryLabel = CustomTriggerManager.CATEGORIES[trigger.category].label;
+        return `
+            <div class="custom-item">
+                <span class="custom-icon">${trigger.icon}</span>
+                <div class="custom-info">
+                    <span class="custom-label">${trigger.label}</span>
+                    <span class="custom-category">${categoryLabel}</span>
+                </div>
+                <button class="btn-icon-delete" data-id="${trigger.id}" onclick="deleteCustomTrigger('${trigger.id}')">×</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Helper function to delete custom trigger
+function deleteCustomTrigger(id) {
+    if (confirm('Are you sure you want to delete this custom trigger?')) {
+        CustomTriggerManager.deleteCustomTrigger(id);
+        renderCustomTriggersList();
+    }
 }
 
 function showSharedDataView(data) {

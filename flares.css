@@ -815,3 +815,274 @@ hr {
     border-top: 1px solid #e5e7eb;
     margin: 1.5rem 0;
 }
+
+/* Customization Buttons */
+.customization-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+/* Custom Items List */
+.custom-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+}
+
+.custom-emoji {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+}
+
+.custom-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.custom-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.custom-label {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 1rem;
+}
+
+.custom-colors {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.custom-category {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.form-section label {
+    display: block;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+/* Emoji Picker Button */
+.emoji-picker-btn {
+    width: 100%;
+    height: 80px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emoji-picker-btn:hover {
+    border-color: #667eea;
+    background: #f3f4f6;
+}
+
+.emoji-picker-btn #selectedEmojiDisplay {
+    font-size: 1rem;
+    color: #6b7280;
+}
+
+.emoji-picker-btn #selectedEmojiDisplay[data-emoji]:not([data-emoji=""]) {
+    font-size: 3rem;
+    color: #1f2937;
+}
+
+/* Color Checkboxes */
+.color-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.color-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.color-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.color-checkbox .color-indicator {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.color-checkbox.green .color-indicator {
+    background: #10b981;
+}
+
+.color-checkbox.orange .color-indicator {
+    background: #f59e0b;
+}
+
+.color-checkbox.red .color-indicator {
+    background: #ef4444;
+}
+
+.color-checkbox:hover {
+    border-color: #d1d5db;
+    background: #f3f4f6;
+}
+
+.color-checkbox input[type="checkbox"]:checked {
+    accent-color: #667eea;
+}
+
+/* Category Radios */
+.category-radios {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.category-radio {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.category-radio input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.category-radio .category-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.category-radio:hover {
+    border-color: #d1d5db;
+    background: #f3f4f6;
+}
+
+.category-radio input[type="radio"]:checked {
+    accent-color: #667eea;
+}
+
+.category-radio:has(input[type="radio"]:checked) {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+/* Modal Actions */
+.modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
+.modal-actions .btn {
+    flex: 1;
+}
+
+/* Emoji Picker Grid */
+.emoji-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    gap: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.emoji-picker-item {
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 2rem;
+    width: 100%;
+    aspect-ratio: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emoji-picker-item:hover {
+    transform: scale(1.1);
+    border-color: #667eea;
+    background: #f3f4f6;
+    z-index: 1;
+}
+
+.emoji-picker-item:active {
+    transform: scale(0.95);
+}
+
+/* Empty State Enhancements */
+.custom-emojis-list .empty-state,
+.custom-triggers-list .empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+/* Responsive adjustments for custom UI */
+@media (max-width: 768px) {
+    .emoji-picker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+        gap: 0.4rem;
+    }
+
+    .emoji-picker-item {
+        font-size: 1.5rem;
+    }
+
+    .custom-emoji {
+        font-size: 2rem;
+    }
+
+    .custom-icon {
+        font-size: 1.5rem;
+    }
+}
