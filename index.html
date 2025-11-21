@@ -34,7 +34,7 @@
                         <span class="flare-desc">Feeling good and in control</span>
                     </button>
 
-                    <button class="flare-btn amber" data-mood="amber">
+                    <button class="flare-btn orange" data-mood="orange">
                         <div class="flare-light"></div>
                         <span class="flare-label">Struggling</span>
                         <span class="flare-desc">Finding things challenging</span>
@@ -133,11 +133,170 @@
 
                     <hr>
 
+                    <h3>Customization</h3>
+                    <div class="customization-buttons">
+                        <button class="btn btn-secondary" id="manageCustomEmojisBtn">Manage Custom Emojis</button>
+                        <button class="btn btn-secondary" id="manageCustomTriggersBtn">Manage Custom Triggers</button>
+                    </div>
+
+                    <hr>
+
                     <h3>Your History</h3>
                     <div class="history-list" id="historyList">
                         <!-- History populated dynamically -->
                     </div>
                     <button class="btn btn-link" id="clearHistoryBtn">Clear History</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Emojis Modal -->
+        <div class="modal" id="customEmojisModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Custom Emojis</h2>
+                    <button class="modal-close" id="closeCustomEmojis">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Create custom emoji feelings that match your experiences</p>
+
+                    <div class="custom-emojis-list" id="customEmojisList">
+                        <!-- Custom emojis populated dynamically -->
+                    </div>
+
+                    <button class="btn btn-primary" id="addCustomEmojiBtn">+ Add Custom Emoji</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Custom Emoji Modal -->
+        <div class="modal" id="addEmojiModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add Custom Emoji</h2>
+                    <button class="modal-close" id="closeAddEmoji">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-section">
+                        <label>Emoji</label>
+                        <button class="emoji-picker-btn" id="emojiPickerBtn">
+                            <span id="selectedEmojiDisplay">Tap to select emoji</span>
+                        </button>
+                    </div>
+
+                    <div class="form-section">
+                        <label>Feeling/Emotion Label</label>
+                        <input type="text" id="emojiLabelInput" placeholder="e.g., Anxious, Happy, Tired" class="input">
+                    </div>
+
+                    <div class="form-section">
+                        <label>Associated Mood Colors</label>
+                        <p class="help-text small">Select which traffic light colors this feeling applies to</p>
+                        <div class="color-checkboxes">
+                            <label class="color-checkbox green">
+                                <input type="checkbox" value="green" class="emoji-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Stable</span>
+                            </label>
+                            <label class="color-checkbox orange">
+                                <input type="checkbox" value="orange" class="emoji-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Struggling</span>
+                            </label>
+                            <label class="color-checkbox red">
+                                <input type="checkbox" value="red" class="emoji-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Overwhelmed</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelAddEmoji">Cancel</button>
+                        <button class="btn btn-primary" id="saveCustomEmoji">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emoji Picker Modal -->
+        <div class="modal" id="emojiPickerModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Select Emoji</h2>
+                    <button class="modal-close" id="closeEmojiPicker">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="emoji-picker-grid" id="emojiPickerGrid">
+                        <!-- Emoji picker populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Triggers Modal -->
+        <div class="modal" id="customTriggersModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Custom Triggers</h2>
+                    <button class="modal-close" id="closeCustomTriggers">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Create custom triggers specific to your experiences</p>
+
+                    <div class="custom-triggers-list" id="customTriggersList">
+                        <!-- Custom triggers populated dynamically -->
+                    </div>
+
+                    <button class="btn btn-primary" id="addCustomTriggerBtn">+ Add Custom Trigger</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Custom Trigger Modal -->
+        <div class="modal" id="addTriggerModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add Custom Trigger</h2>
+                    <button class="modal-close" id="closeAddTrigger">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-section">
+                        <label>Trigger/Reason</label>
+                        <input type="text" id="triggerLabelInput" placeholder="e.g., Bright fluorescent lights" class="input">
+                    </div>
+
+                    <div class="form-section">
+                        <label>Category</label>
+                        <p class="help-text small">Choose which category this trigger belongs to</p>
+                        <div class="category-radios">
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="sensory">
+                                <span class="category-icon">👂</span>
+                                <span>Sensory</span>
+                            </label>
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="physical">
+                                <span class="category-icon">🏃</span>
+                                <span>Physical</span>
+                            </label>
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="emotional">
+                                <span class="category-icon">❤️</span>
+                                <span>Emotional</span>
+                            </label>
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="cognitive">
+                                <span class="category-icon">🧠</span>
+                                <span>Cognitive</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelAddTrigger">Cancel</button>
+                        <button class="btn btn-primary" id="saveCustomTrigger">Save</button>
+                    </div>
                 </div>
             </div>
         </div>

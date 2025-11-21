@@ -16,7 +16,7 @@ const EMOJI_DATA = {
         { emoji: '🤗', label: 'Grateful' },
         { emoji: '✨', label: 'Positive' }
     ],
-    amber: [
+    orange: [
         { emoji: '😕', label: 'Confused' },
         { emoji: '😟', label: 'Worried' },
         { emoji: '😔', label: 'Sad' },
@@ -47,7 +47,7 @@ const TRIGGERS_DATA = {
         { id: 'rest', label: 'Good rest', icon: '😴' },
         { id: 'nature', label: 'Time in nature', icon: '🌳' }
     ],
-    amber: [
+    orange: [
         { id: 'work_stress', label: 'Work pressure', icon: '💼' },
         { id: 'social_conflict', label: 'Social conflict', icon: '💬' },
         { id: 'lack_sleep', label: 'Lack of sleep', icon: '😴' },
@@ -70,6 +70,105 @@ const TRIGGERS_DATA = {
         { id: 'intrusive_thoughts', label: 'Intrusive thoughts', icon: '🌀' }
     ]
 };
+
+// Common emoji list for picker
+const COMMON_EMOJIS = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇',
+    '🥰', '😍', '🤩', '😘', '😗', '☺️', '😚', '😙', '😋', '😛', '😜', '🤪', '😝',
+    '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄',
+    '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧',
+    '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐', '😕', '😟', '🙁',
+    '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭',
+    '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈',
+    '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖', '💪', '🦾',
+    '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄',
+    '💋', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕',
+    '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️',
+    '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏',
+    '♐', '♑', '♒', '♓', '🆔', '⚛️', '✨', '⭐', '🌟', '💫', '⚡', '🔥', '💥', '☄️'
+];
+
+// ============================================================================
+// Custom Emoji Manager
+// ============================================================================
+
+class CustomEmojiManager {
+    static STORAGE_KEY = 'flares_custom_emojis';
+
+    static getCustomEmojis() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    }
+
+    static saveCustomEmojis(emojis) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(emojis));
+    }
+
+    static addCustomEmoji(emoji, label, associatedColors) {
+        const customEmojis = this.getCustomEmojis();
+        customEmojis.push({
+            id: Date.now(),
+            emoji,
+            label,
+            associatedColors // array of 'green', 'orange', 'red'
+        });
+        this.saveCustomEmojis(customEmojis);
+        return customEmojis;
+    }
+
+    static deleteCustomEmoji(id) {
+        const customEmojis = this.getCustomEmojis().filter(e => e.id !== id);
+        this.saveCustomEmojis(customEmojis);
+        return customEmojis;
+    }
+
+    static getEmojisForMood(mood) {
+        const customEmojis = this.getCustomEmojis();
+        return customEmojis.filter(e => e.associatedColors.includes(mood));
+    }
+}
+
+// ============================================================================
+// Custom Trigger/Reason Manager
+// ============================================================================
+
+class CustomTriggerManager {
+    static STORAGE_KEY = 'flares_custom_triggers';
+
+    static CATEGORIES = {
+        sensory: { label: 'Sensory', icon: '👂' },
+        physical: { label: 'Physical', icon: '🏃' },
+        emotional: { label: 'Emotional', icon: '❤️' },
+        cognitive: { label: 'Cognitive', icon: '🧠' }
+    };
+
+    static getCustomTriggers() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    }
+
+    static saveCustomTriggers(triggers) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(triggers));
+    }
+
+    static addCustomTrigger(label, category) {
+        const customTriggers = this.getCustomTriggers();
+        customTriggers.push({
+            id: 'custom_' + Date.now(),
+            label,
+            category,
+            icon: this.CATEGORIES[category].icon
+        });
+        this.saveCustomTriggers(customTriggers);
+        return customTriggers;
+    }
+
+    static deleteCustomTrigger(id) {
+        const customTriggers = this.getCustomTriggers().filter(t => t.id !== id);
+        this.saveCustomTriggers(customTriggers);
+        return customTriggers;
+    }
+}
 
 // ============================================================================
 // State Management
@@ -203,7 +302,7 @@ class NotificationManager {
     static generateMessage(sessionData) {
         const moodLabels = {
             green: 'Stable 🟢',
-            amber: 'Struggling 🟡',
+            orange: 'Struggling 🟡',
             red: 'Overwhelmed 🔴'
         };
 
@@ -231,7 +330,7 @@ This is an automated message from Flares mood tracking app.
     static sendViaEmail(sessionData, supports) {
         const message = this.generateMessage(sessionData);
         const emails = supports.map(s => s.email).join(',');
-        const subject = `Flares Check-in: ${sessionData.mood === 'red' ? 'Need Support 🔴' : sessionData.mood === 'amber' ? 'Struggling 🟡' : 'Update 🟢'}`;
+        const subject = `Flares Check-in: ${sessionData.mood === 'red' ? 'Need Support 🔴' : sessionData.mood === 'orange' ? 'Struggling 🟡' : 'Update 🟢'}`;
 
         const mailtoLink = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
         window.location.href = mailtoLink;
@@ -279,7 +378,12 @@ class UIRenderer {
         const grid = document.getElementById('emojiGrid');
         grid.innerHTML = '';
 
-        EMOJI_DATA[mood].forEach(({ emoji, label }) => {
+        // Combine default emojis with custom emojis for this mood
+        const defaultEmojis = EMOJI_DATA[mood];
+        const customEmojis = CustomEmojiManager.getEmojisForMood(mood);
+        const allEmojis = [...defaultEmojis, ...customEmojis];
+
+        allEmojis.forEach(({ emoji, label }) => {
             const btn = document.createElement('button');
             btn.className = 'emoji-btn';
             btn.dataset.emoji = emoji;
@@ -300,7 +404,12 @@ class UIRenderer {
         const grid = document.getElementById('triggersGrid');
         grid.innerHTML = '';
 
-        TRIGGERS_DATA[mood].forEach(({ id, label, icon }) => {
+        // Combine default triggers with custom triggers
+        const defaultTriggers = TRIGGERS_DATA[mood];
+        const customTriggers = CustomTriggerManager.getCustomTriggers();
+        const allTriggers = [...defaultTriggers, ...customTriggers];
+
+        allTriggers.forEach(({ id, label, icon }) => {
             const btn = document.createElement('button');
             btn.className = 'trigger-btn';
             btn.dataset.triggerId = id;
@@ -320,7 +429,7 @@ class UIRenderer {
         const preview = document.getElementById('notificationPreview');
         const moodInfo = {
             green: { label: 'Stable', color: '#10b981', emoji: '🟢' },
-            amber: { label: 'Struggling', color: '#f59e0b', emoji: '🟡' },
+            orange: { label: 'Struggling', color: '#f59e0b', emoji: '🟡' },
             red: { label: 'Overwhelmed', color: '#ef4444', emoji: '🔴' }
         };
 
@@ -423,7 +532,7 @@ class UIRenderer {
 
         const moodLabels = {
             green: '🟢 Stable',
-            amber: '🟡 Struggling',
+            orange: '🟡 Struggling',
             red: '🔴 Overwhelmed'
         };
 
@@ -593,6 +702,116 @@ function initApp() {
         }
     });
 
+    // Custom Emojis Management
+    document.getElementById('manageCustomEmojisBtn').addEventListener('click', () => {
+        renderCustomEmojisList();
+        ScreenManager.showModal('customEmojisModal');
+    });
+
+    document.getElementById('closeCustomEmojis').addEventListener('click', () => {
+        ScreenManager.hideModal('customEmojisModal');
+    });
+
+    document.getElementById('addCustomEmojiBtn').addEventListener('click', () => {
+        // Reset form
+        document.getElementById('selectedEmojiDisplay').textContent = 'Tap to select emoji';
+        document.getElementById('selectedEmojiDisplay').dataset.emoji = '';
+        document.getElementById('emojiLabelInput').value = '';
+        document.querySelectorAll('.emoji-color-cb').forEach(cb => cb.checked = false);
+
+        ScreenManager.showModal('addEmojiModal');
+    });
+
+    document.getElementById('closeAddEmoji').addEventListener('click', () => {
+        ScreenManager.hideModal('addEmojiModal');
+    });
+
+    document.getElementById('cancelAddEmoji').addEventListener('click', () => {
+        ScreenManager.hideModal('addEmojiModal');
+    });
+
+    document.getElementById('emojiPickerBtn').addEventListener('click', () => {
+        renderEmojiPicker();
+        ScreenManager.showModal('emojiPickerModal');
+    });
+
+    document.getElementById('closeEmojiPicker').addEventListener('click', () => {
+        ScreenManager.hideModal('emojiPickerModal');
+    });
+
+    document.getElementById('saveCustomEmoji').addEventListener('click', () => {
+        const emojiDisplay = document.getElementById('selectedEmojiDisplay');
+        const emoji = emojiDisplay.dataset.emoji;
+        const label = document.getElementById('emojiLabelInput').value.trim();
+        const selectedColors = Array.from(document.querySelectorAll('.emoji-color-cb:checked'))
+            .map(cb => cb.value);
+
+        if (!emoji) {
+            alert('Please select an emoji');
+            return;
+        }
+
+        if (!label) {
+            alert('Please enter a feeling/emotion label');
+            return;
+        }
+
+        if (selectedColors.length === 0) {
+            alert('Please select at least one mood color');
+            return;
+        }
+
+        CustomEmojiManager.addCustomEmoji(emoji, label, selectedColors);
+        ScreenManager.hideModal('addEmojiModal');
+        renderCustomEmojisList();
+    });
+
+    // Custom Triggers Management
+    document.getElementById('manageCustomTriggersBtn').addEventListener('click', () => {
+        renderCustomTriggersList();
+        ScreenManager.showModal('customTriggersModal');
+    });
+
+    document.getElementById('closeCustomTriggers').addEventListener('click', () => {
+        ScreenManager.hideModal('customTriggersModal');
+    });
+
+    document.getElementById('addCustomTriggerBtn').addEventListener('click', () => {
+        // Reset form
+        document.getElementById('triggerLabelInput').value = '';
+        document.querySelectorAll('input[name="triggerCategory"]').forEach(r => r.checked = false);
+
+        ScreenManager.showModal('addTriggerModal');
+    });
+
+    document.getElementById('closeAddTrigger').addEventListener('click', () => {
+        ScreenManager.hideModal('addTriggerModal');
+    });
+
+    document.getElementById('cancelAddTrigger').addEventListener('click', () => {
+        ScreenManager.hideModal('addTriggerModal');
+    });
+
+    document.getElementById('saveCustomTrigger').addEventListener('click', () => {
+        const label = document.getElementById('triggerLabelInput').value.trim();
+        const categoryInput = document.querySelector('input[name="triggerCategory"]:checked');
+
+        if (!label) {
+            alert('Please enter a trigger/reason');
+            return;
+        }
+
+        if (!categoryInput) {
+            alert('Please select a category');
+            return;
+        }
+
+        const category = categoryInput.value;
+        CustomTriggerManager.addCustomTrigger(label, category);
+        ScreenManager.hideModal('addTriggerModal');
+        renderCustomTriggersList();
+    });
+
     // Close modals on outside click
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
@@ -601,6 +820,91 @@ function initApp() {
             }
         });
     });
+}
+
+// Helper function to render custom emojis list
+function renderCustomEmojisList() {
+    const list = document.getElementById('customEmojisList');
+    const customEmojis = CustomEmojiManager.getCustomEmojis();
+
+    if (customEmojis.length === 0) {
+        list.innerHTML = '<p class="empty-state">No custom emojis yet. Add your own!</p>';
+        return;
+    }
+
+    list.innerHTML = customEmojis.map(emoji => {
+        const colorDots = emoji.associatedColors.map(color => {
+            const colorMap = { green: '#10b981', orange: '#f59e0b', red: '#ef4444' };
+            return `<span class="color-dot" style="background: ${colorMap[color]}"></span>`;
+        }).join('');
+
+        return `
+            <div class="custom-item">
+                <span class="custom-emoji">${emoji.emoji}</span>
+                <div class="custom-info">
+                    <span class="custom-label">${emoji.label}</span>
+                    <div class="custom-colors">${colorDots}</div>
+                </div>
+                <button class="btn-icon-delete" data-id="${emoji.id}" onclick="deleteCustomEmoji(${emoji.id})">×</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Helper function to render emoji picker
+function renderEmojiPicker() {
+    const grid = document.getElementById('emojiPickerGrid');
+    grid.innerHTML = COMMON_EMOJIS.map(emoji => `
+        <button class="emoji-picker-item" onclick="selectEmoji('${emoji}')">${emoji}</button>
+    `).join('');
+}
+
+// Helper function to select emoji from picker
+function selectEmoji(emoji) {
+    document.getElementById('selectedEmojiDisplay').textContent = emoji;
+    document.getElementById('selectedEmojiDisplay').dataset.emoji = emoji;
+    ScreenManager.hideModal('emojiPickerModal');
+}
+
+// Helper function to delete custom emoji
+function deleteCustomEmoji(id) {
+    if (confirm('Are you sure you want to delete this custom emoji?')) {
+        CustomEmojiManager.deleteCustomEmoji(id);
+        renderCustomEmojisList();
+    }
+}
+
+// Helper function to render custom triggers list
+function renderCustomTriggersList() {
+    const list = document.getElementById('customTriggersList');
+    const customTriggers = CustomTriggerManager.getCustomTriggers();
+
+    if (customTriggers.length === 0) {
+        list.innerHTML = '<p class="empty-state">No custom triggers yet. Add your own!</p>';
+        return;
+    }
+
+    list.innerHTML = customTriggers.map(trigger => {
+        const categoryLabel = CustomTriggerManager.CATEGORIES[trigger.category].label;
+        return `
+            <div class="custom-item">
+                <span class="custom-icon">${trigger.icon}</span>
+                <div class="custom-info">
+                    <span class="custom-label">${trigger.label}</span>
+                    <span class="custom-category">${categoryLabel}</span>
+                </div>
+                <button class="btn-icon-delete" data-id="${trigger.id}" onclick="deleteCustomTrigger('${trigger.id}')">×</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Helper function to delete custom trigger
+function deleteCustomTrigger(id) {
+    if (confirm('Are you sure you want to delete this custom trigger?')) {
+        CustomTriggerManager.deleteCustomTrigger(id);
+        renderCustomTriggersList();
+    }
 }
 
 function showSharedDataView(data) {
