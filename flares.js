@@ -113,12 +113,16 @@ class CustomEmojiManager {
             associatedColors // array of 'green', 'orange', 'red'
         });
         this.saveCustomEmojis(customEmojis);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
         return customEmojis;
     }
 
     static deleteCustomEmoji(id) {
         const customEmojis = this.getCustomEmojis().filter(e => e.id !== id);
         this.saveCustomEmojis(customEmojis);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
         return customEmojis;
     }
 
@@ -160,13 +164,244 @@ class CustomTriggerManager {
             icon: this.CATEGORIES[category].icon
         });
         this.saveCustomTriggers(customTriggers);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
         return customTriggers;
     }
 
     static deleteCustomTrigger(id) {
         const customTriggers = this.getCustomTriggers().filter(t => t.id !== id);
         this.saveCustomTriggers(customTriggers);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
         return customTriggers;
+    }
+}
+
+// ============================================================================
+// Authentication Manager (Firebase)
+// ============================================================================
+
+class AuthManager {
+    static currentUser = null;
+    static isGuest = false;
+    static listeners = [];
+
+    static async init() {
+        return new Promise((resolve) => {
+            // Wait for Firebase to be ready
+            if (window.firebaseAuth) {
+                this.setupAuthListener();
+                resolve();
+            } else {
+                window.addEventListener('firebaseReady', () => {
+                    this.setupAuthListener();
+                    resolve();
+                });
+                // Timeout fallback - if Firebase fails to load, continue as guest
+                setTimeout(() => {
+                    if (!window.firebaseAuth) {
+                        console.warn('Firebase not loaded, continuing in offline mode');
+                        this.isGuest = true;
+                        resolve();
+                    }
+                }, 5000);
+            }
+        });
+    }
+
+    static setupAuthListener() {
+        if (!window.firebaseAuth || !window.firebaseAuthFunctions) return;
+
+        const { onAuthStateChanged } = window.firebaseAuthFunctions;
+        onAuthStateChanged(window.firebaseAuth, (user) => {
+            this.currentUser = user;
+            this.isGuest = !user;
+            this.notifyListeners(user);
+
+            // Sync data when user logs in
+            if (user) {
+                CloudStorageManager.syncFromCloud();
+            }
+        });
+    }
+
+    static onAuthChange(callback) {
+        this.listeners.push(callback);
+        // Call immediately with current state
+        callback(this.currentUser);
+    }
+
+    static notifyListeners(user) {
+        this.listeners.forEach(callback => callback(user));
+    }
+
+    static async signUp(email, password, displayName) {
+        if (!window.firebaseAuth || !window.firebaseAuthFunctions) {
+            throw new Error('Firebase not available');
+        }
+
+        const { createUserWithEmailAndPassword, updateProfile } = window.firebaseAuthFunctions;
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(window.firebaseAuth, email, password);
+
+            // Set display name
+            if (displayName) {
+                await updateProfile(userCredential.user, { displayName });
+            }
+
+            // Initialize user data in Firestore
+            await CloudStorageManager.initUserData(userCredential.user.uid);
+
+            return userCredential.user;
+        } catch (error) {
+            throw this.parseError(error);
+        }
+    }
+
+    static async signIn(email, password) {
+        if (!window.firebaseAuth || !window.firebaseAuthFunctions) {
+            throw new Error('Firebase not available');
+        }
+
+        const { signInWithEmailAndPassword } = window.firebaseAuthFunctions;
+
+        try {
+            const userCredential = await signInWithEmailAndPassword(window.firebaseAuth, email, password);
+            return userCredential.user;
+        } catch (error) {
+            throw this.parseError(error);
+        }
+    }
+
+    static async signOut() {
+        if (!window.firebaseAuth || !window.firebaseAuthFunctions) {
+            throw new Error('Firebase not available');
+        }
+
+        const { signOut } = window.firebaseAuthFunctions;
+        await signOut(window.firebaseAuth);
+        this.isGuest = true;
+    }
+
+    static continueAsGuest() {
+        this.isGuest = true;
+        this.currentUser = null;
+        localStorage.setItem('flares_guest_mode', 'true');
+    }
+
+    static isGuestMode() {
+        return this.isGuest || !this.currentUser;
+    }
+
+    static parseError(error) {
+        const errorMap = {
+            'auth/email-already-in-use': 'This email is already registered',
+            'auth/weak-password': 'Password should be at least 6 characters',
+            'auth/invalid-email': 'Please enter a valid email address',
+            'auth/user-not-found': 'No account found with this email',
+            'auth/wrong-password': 'Incorrect password',
+            'auth/too-many-requests': 'Too many attempts. Please try again later',
+            'auth/network-request-failed': 'Network error. Please check your connection'
+        };
+
+        return new Error(errorMap[error.code] || error.message);
+    }
+}
+
+// ============================================================================
+// Cloud Storage Manager (Firestore)
+// ============================================================================
+
+class CloudStorageManager {
+    static async initUserData(userId) {
+        if (!window.firebaseDb || !window.firebaseDbFunctions) return;
+
+        const { doc, setDoc, getDoc } = window.firebaseDbFunctions;
+        const userDocRef = doc(window.firebaseDb, 'users', userId);
+
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+            // Initialize with local data if exists
+            const localSupports = StorageManager.getSupports();
+            const localHistory = StorageManager.getHistory();
+            const localCustomEmojis = CustomEmojiManager.getCustomEmojis();
+            const localCustomTriggers = CustomTriggerManager.getCustomTriggers();
+
+            await setDoc(userDocRef, {
+                supports: localSupports,
+                history: localHistory,
+                customEmojis: localCustomEmojis,
+                customTriggers: localCustomTriggers,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+        }
+    }
+
+    static async syncFromCloud() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) return;
+
+        try {
+            const { doc, getDoc } = window.firebaseDbFunctions;
+            const userDocRef = doc(window.firebaseDb, 'users', AuthManager.currentUser.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+
+                // Sync to localStorage (localStorage acts as cache)
+                if (data.supports) StorageManager.saveSupports(data.supports);
+                if (data.history) StorageManager.saveHistory(data.history);
+                if (data.customEmojis) CustomEmojiManager.saveCustomEmojis(data.customEmojis);
+                if (data.customTriggers) CustomTriggerManager.saveCustomTriggers(data.customTriggers);
+
+                console.log('Data synced from cloud');
+            }
+        } catch (error) {
+            console.error('Error syncing from cloud:', error);
+        }
+    }
+
+    static async syncToCloud() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) return;
+
+        try {
+            const { doc, setDoc } = window.firebaseDbFunctions;
+            const userDocRef = doc(window.firebaseDb, 'users', AuthManager.currentUser.uid);
+
+            await setDoc(userDocRef, {
+                supports: StorageManager.getSupports(),
+                history: StorageManager.getHistory(),
+                customEmojis: CustomEmojiManager.getCustomEmojis(),
+                customTriggers: CustomTriggerManager.getCustomTriggers(),
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            console.log('Data synced to cloud');
+        } catch (error) {
+            console.error('Error syncing to cloud:', error);
+        }
+    }
+
+    static async addHistoryEntry(entry) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) return;
+
+        try {
+            const { collection, addDoc } = window.firebaseDbFunctions;
+            await addDoc(
+                collection(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'history'),
+                {
+                    ...entry,
+                    createdAt: new Date().toISOString()
+                }
+            );
+            // Also sync the full data
+            await this.syncToCloud();
+        } catch (error) {
+            console.error('Error adding history entry:', error);
+        }
     }
 }
 
@@ -217,12 +452,16 @@ class AppState {
         };
     }
 
-    // Future: This method can be extended to sync with Firebase
+    // Save session and sync with Firebase if authenticated
     async save() {
         const history = StorageManager.getHistory();
         history.push({...this.sessionData});
         StorageManager.saveHistory(history);
-        // TODO: Add Firebase real-time database sync here
+
+        // Sync to cloud if logged in
+        if (!AuthManager.isGuestMode()) {
+            await CloudStorageManager.addHistoryEntry(this.sessionData);
+        }
     }
 }
 
@@ -249,12 +488,16 @@ class StorageManager {
         const supports = this.getSupports();
         supports.push({ id: Date.now(), name, email });
         this.saveSupports(supports);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
         return supports;
     }
 
     static removeSupport(id) {
         const supports = this.getSupports().filter(s => s.id !== id);
         this.saveSupports(supports);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
         return supports;
     }
 
@@ -555,13 +798,34 @@ class UIRenderer {
 
 const appState = new AppState();
 
-function initApp() {
+async function initApp() {
     // Check for shared link
     const sharedData = NotificationManager.parseSharedLink();
     if (sharedData) {
         showSharedDataView(sharedData);
         return;
     }
+
+    // Initialize authentication
+    await AuthManager.init();
+
+    // Setup auth state listener
+    AuthManager.onAuthChange((user) => {
+        updateUIForAuthState(user);
+    });
+
+    // Check if user should see auth screen
+    const wasGuest = localStorage.getItem('flares_guest_mode') === 'true';
+    if (!AuthManager.currentUser && !wasGuest) {
+        // Show auth screen for new users
+        ScreenManager.showScreen('authScreen');
+    } else {
+        // Continue to main app
+        ScreenManager.showScreen('moodScreen');
+    }
+
+    // Setup auth UI handlers
+    setupAuthHandlers();
 
     // Mood Selection
     document.querySelectorAll('.flare-btn').forEach(btn => {
@@ -930,6 +1194,173 @@ function showSharedDataView(data) {
     UIRenderer.renderPreview(data);
     const preview = document.getElementById('notificationPreview');
     document.getElementById('sharedPreview').innerHTML = preview.innerHTML;
+}
+
+// ============================================================================
+// Auth UI Handlers
+// ============================================================================
+
+function setupAuthHandlers() {
+    // Toggle between login and signup forms
+    const showSignupBtn = document.getElementById('showSignup');
+    const showLoginBtn = document.getElementById('showLogin');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+
+    if (showSignupBtn) {
+        showSignupBtn.addEventListener('click', () => {
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'block';
+        });
+    }
+
+    if (showLoginBtn) {
+        showLoginBtn.addEventListener('click', () => {
+            signupForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        });
+    }
+
+    // Login handler
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', async () => {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+
+            errorEl.textContent = '';
+
+            if (!email || !password) {
+                errorEl.textContent = 'Please enter email and password';
+                return;
+            }
+
+            loginBtn.classList.add('loading');
+
+            try {
+                await AuthManager.signIn(email, password);
+                localStorage.removeItem('flares_guest_mode');
+                ScreenManager.showScreen('moodScreen');
+            } catch (error) {
+                errorEl.textContent = error.message;
+            } finally {
+                loginBtn.classList.remove('loading');
+            }
+        });
+    }
+
+    // Signup handler
+    const signupBtn = document.getElementById('signupBtn');
+    if (signupBtn) {
+        signupBtn.addEventListener('click', async () => {
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const confirm = document.getElementById('signupConfirm').value;
+            const errorEl = document.getElementById('signupError');
+
+            errorEl.textContent = '';
+
+            if (!name || !email || !password) {
+                errorEl.textContent = 'Please fill in all fields';
+                return;
+            }
+
+            if (password !== confirm) {
+                errorEl.textContent = 'Passwords do not match';
+                return;
+            }
+
+            if (password.length < 6) {
+                errorEl.textContent = 'Password must be at least 6 characters';
+                return;
+            }
+
+            signupBtn.classList.add('loading');
+
+            try {
+                await AuthManager.signUp(email, password, name);
+                localStorage.removeItem('flares_guest_mode');
+                ScreenManager.showScreen('moodScreen');
+            } catch (error) {
+                errorEl.textContent = error.message;
+            } finally {
+                signupBtn.classList.remove('loading');
+            }
+        });
+    }
+
+    // Skip auth (continue as guest)
+    const skipAuthBtn = document.getElementById('skipAuthBtn');
+    if (skipAuthBtn) {
+        skipAuthBtn.addEventListener('click', () => {
+            AuthManager.continueAsGuest();
+            ScreenManager.showScreen('moodScreen');
+        });
+    }
+
+    // Logout handler
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await AuthManager.signOut();
+                localStorage.removeItem('flares_guest_mode');
+                ScreenManager.hideModal('settingsModal');
+                ScreenManager.showScreen('authScreen');
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        });
+    }
+
+    // Create account from guest mode
+    const createAccountBtn = document.getElementById('createAccountBtn');
+    if (createAccountBtn) {
+        createAccountBtn.addEventListener('click', () => {
+            localStorage.removeItem('flares_guest_mode');
+            ScreenManager.hideModal('settingsModal');
+            ScreenManager.showScreen('authScreen');
+        });
+    }
+}
+
+function updateUIForAuthState(user) {
+    const userProfileSection = document.getElementById('userProfileSection');
+    const guestModeNotice = document.getElementById('guestModeNotice');
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    const userEmail = document.getElementById('userEmail');
+
+    if (user) {
+        // Logged in - show profile
+        if (userProfileSection) userProfileSection.style.display = 'block';
+        if (guestModeNotice) guestModeNotice.style.display = 'none';
+
+        // Update user info
+        if (userAvatar) {
+            const initial = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+            userAvatar.textContent = initial;
+        }
+        if (userName) userName.textContent = user.displayName || 'User';
+        if (userEmail) userEmail.textContent = user.email;
+    } else if (AuthManager.isGuest) {
+        // Guest mode - show notice
+        if (userProfileSection) userProfileSection.style.display = 'none';
+        if (guestModeNotice) guestModeNotice.style.display = 'block';
+    } else {
+        // Not logged in, not guest - hide both
+        if (userProfileSection) userProfileSection.style.display = 'none';
+        if (guestModeNotice) guestModeNotice.style.display = 'none';
+    }
+}
+
+// Helper to sync data changes to cloud
+async function syncDataToCloud() {
+    if (!AuthManager.isGuestMode()) {
+        await CloudStorageManager.syncToCloud();
+    }
 }
 
 // Initialize when DOM is ready

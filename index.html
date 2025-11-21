@@ -9,6 +9,56 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="flares.css">
     <link rel="manifest" href="/manifest.json">
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase configuration - Replace with your own Firebase project config
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAP0mJC-7jDRZzpv4dWT11A7EhSDFbfSo",
+            authDomain: "flare-a0418.firebaseapp.com",
+            projectId: "flare-a0418",
+            storageBucket: "flare-a0418.firebasestorage.app",
+            messagingSenderId: "311211387060",
+            appId: "1:311211387060:web:45f0ca4374d5d449054fe1",
+            measurementId: "G-K65CLNNFGN"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make Firebase available globally
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.firebaseAuthFunctions = {
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged,
+            updateProfile
+        };
+        window.firebaseDbFunctions = {
+            doc,
+            setDoc,
+            getDoc,
+            collection,
+            addDoc,
+            query,
+            orderBy,
+            limit,
+            getDocs,
+            deleteDoc
+        };
+
+        // Dispatch event when Firebase is ready
+        window.dispatchEvent(new Event('firebaseReady'));
+    </script>
 </head>
 <body>
     <div class="stars"></div>
@@ -21,8 +71,58 @@
             </div>
         </nav>
 
+        <!-- Auth Screen: Login/Signup -->
+        <div class="screen active" id="authScreen">
+            <div class="screen-content auth-content">
+                <div class="auth-logo">
+                    <div class="auth-flare"></div>
+                    <h1 class="auth-title">Flares</h1>
+                    <p class="auth-tagline">Track your mood. Share with your support network.</p>
+                </div>
+
+                <!-- Login Form -->
+                <div class="auth-form" id="loginForm">
+                    <h2>Welcome Back</h2>
+                    <div class="auth-fields">
+                        <input type="email" id="loginEmail" placeholder="Email" class="input auth-input">
+                        <input type="password" id="loginPassword" placeholder="Password" class="input auth-input">
+                    </div>
+                    <div class="auth-error" id="loginError"></div>
+                    <button class="btn btn-primary auth-btn" id="loginBtn">Sign In</button>
+                    <p class="auth-switch">
+                        Don't have an account?
+                        <button class="btn-link-inline" id="showSignup">Sign Up</button>
+                    </p>
+                </div>
+
+                <!-- Signup Form -->
+                <div class="auth-form" id="signupForm" style="display: none;">
+                    <h2>Create Account</h2>
+                    <div class="auth-fields">
+                        <input type="text" id="signupName" placeholder="Display Name" class="input auth-input">
+                        <input type="email" id="signupEmail" placeholder="Email" class="input auth-input">
+                        <input type="password" id="signupPassword" placeholder="Password (min 6 characters)" class="input auth-input">
+                        <input type="password" id="signupConfirm" placeholder="Confirm Password" class="input auth-input">
+                    </div>
+                    <div class="auth-error" id="signupError"></div>
+                    <button class="btn btn-primary auth-btn" id="signupBtn">Create Account</button>
+                    <p class="auth-switch">
+                        Already have an account?
+                        <button class="btn-link-inline" id="showLogin">Sign In</button>
+                    </p>
+                </div>
+
+                <!-- Continue without account -->
+                <div class="auth-skip">
+                    <hr>
+                    <button class="btn btn-tertiary" id="skipAuthBtn">Continue without account</button>
+                    <p class="auth-skip-note">Your data will only be saved locally on this device</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Screen 1: Mood Selection (Flares) -->
-        <div class="screen active" id="moodScreen">
+        <div class="screen" id="moodScreen">
             <div class="screen-content">
                 <h1 class="screen-title">How are you feeling?</h1>
                 <p class="screen-subtitle">Select your current state</p>
@@ -118,6 +218,29 @@
                     <button class="modal-close" id="closeSettings">×</button>
                 </div>
                 <div class="modal-body">
+                    <!-- User Profile Section -->
+                    <div class="user-profile-section" id="userProfileSection" style="display: none;">
+                        <div class="user-profile-card">
+                            <div class="user-avatar" id="userAvatar">U</div>
+                            <div class="user-info">
+                                <div class="user-name" id="userName">User</div>
+                                <div class="user-email" id="userEmail">user@example.com</div>
+                            </div>
+                            <div class="sync-status" id="syncStatus">
+                                <span class="sync-icon">☁️</span>
+                                <span class="sync-text">Synced</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-logout" id="logoutBtn">Sign Out</button>
+                    </div>
+
+                    <div class="guest-mode-notice" id="guestModeNotice" style="display: none;">
+                        <p class="guest-notice-text">You're using Flares without an account. Your data is only saved on this device.</p>
+                        <button class="btn btn-primary btn-small" id="createAccountBtn">Create Account to Sync</button>
+                    </div>
+
+                    <hr>
+
                     <h3>Support Contacts</h3>
                     <p class="help-text">Add people who can receive your Flares notifications</p>
 
