@@ -1,13 +1,16 @@
 // Service Worker for offline caching and offline audio playback
-const CACHE_NAME = 'music-hub-v4';
-const AUDIO_CACHE = 'music-hub-audio-v4';
+const CACHE_NAME = 'music-hub-v5';
+const AUDIO_CACHE = 'music-hub-audio-v5';
 
 const urlsToCache = [
     '/',
     '/index.html',
     '/music.html',
+    '/flares.html',
     '/styles.css',
+    '/flares.css',
     '/music.js',
+    '/flares.js',
     '/manifest.json'
 ];
 
