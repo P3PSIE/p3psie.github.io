@@ -237,6 +237,12 @@ This is an automated message from Flares mood tracking app.
         window.location.href = mailtoLink;
     }
 
+    static sendViaSMS(sessionData) {
+        const message = this.generateMessage(sessionData);
+        const smsLink = `sms:?&body=${encodeURIComponent(message)}`;
+        window.location.href = smsLink;
+    }
+
     static generateShareableLink(sessionData) {
         const baseUrl = window.location.origin + window.location.pathname;
         const data = btoa(JSON.stringify(sessionData));
@@ -352,11 +358,20 @@ class UIRenderer {
 
     static renderSupports(supports) {
         const container = document.getElementById('supportsContainer');
+        const emailBtn = document.getElementById('sendNotification');
+        const smsBtn = document.getElementById('sendViaSMS');
 
         if (supports.length === 0) {
-            container.innerHTML = '<p class="empty-state">No support contacts yet. Add some in settings.</p>';
+            container.innerHTML = '<p class="empty-state">No support contacts yet. Add some in settings or send via SMS.</p>';
+            // Hide email button, show SMS button
+            emailBtn.style.display = 'none';
+            smsBtn.style.display = 'inline-block';
             return;
         }
+
+        // Show email button, hide SMS button
+        emailBtn.style.display = 'inline-block';
+        smsBtn.style.display = 'none';
 
         container.innerHTML = supports.map(support => `
             <label class="support-item">
@@ -477,7 +492,7 @@ function initApp() {
         ScreenManager.showScreen('triggersScreen');
     });
 
-    // Send notification
+    // Send notification via email
     document.getElementById('sendNotification').addEventListener('click', async () => {
         const selectedSupports = Array.from(document.querySelectorAll('.support-checkbox:checked'))
             .map(cb => {
@@ -493,6 +508,13 @@ function initApp() {
         await appState.save();
         NotificationManager.sendViaEmail(appState.sessionData, selectedSupports);
 
+        ScreenManager.showModal('successModal');
+    });
+
+    // Send notification via SMS
+    document.getElementById('sendViaSMS').addEventListener('click', async () => {
+        await appState.save();
+        NotificationManager.sendViaSMS(appState.sessionData);
         ScreenManager.showModal('successModal');
     });
 
