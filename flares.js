@@ -4,8 +4,9 @@
 // ============================================================================
 // Data Structures & Configuration
 // ============================================================================
+// These reference FLARES_CONFIG from config.js - edit that file to customize
 
-const EMOJI_DATA = {
+const EMOJI_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.emojis : {
     green: [
         { emoji: '😊', label: 'Happy' },
         { emoji: '😌', label: 'Calm' },
@@ -38,7 +39,7 @@ const EMOJI_DATA = {
     ]
 };
 
-const TRIGGERS_DATA = {
+const TRIGGERS_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.triggers : {
     green: [
         { id: 'good_news', label: 'Good news', icon: '📰' },
         { id: 'social_time', label: 'Quality time with others', icon: '👥' },
@@ -72,7 +73,7 @@ const TRIGGERS_DATA = {
 };
 
 // Common emoji list for picker
-const COMMON_EMOJIS = [
+const COMMON_EMOJIS = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.commonEmojis : [
     '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇',
     '🥰', '😍', '🤩', '😘', '😗', '☺️', '😚', '😙', '😋', '😛', '😜', '🤪', '😝',
     '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄',
