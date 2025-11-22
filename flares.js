@@ -407,6 +407,143 @@ class CloudStorageManager {
 }
 
 // ============================================================================
+// Profile Manager
+// ============================================================================
+
+class ProfileManager {
+    static STORAGE_KEY = 'flares_profile';
+
+    // Get profile data from localStorage (for avatar that can't be in Firebase Auth)
+    static getProfile() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : { avatarUrl: null };
+    }
+
+    // Save profile data to localStorage
+    static saveProfile(profile) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(profile));
+    }
+
+    // Update display name in Firebase Auth
+    static async updateDisplayName(displayName) {
+        if (!AuthManager.currentUser || !window.firebaseAuthFunctions) {
+            throw new Error('Not logged in');
+        }
+
+        const { updateProfile } = window.firebaseAuthFunctions;
+        await updateProfile(AuthManager.currentUser, { displayName });
+
+        // Also save to Firestore for linked contacts to see
+        if (window.firebaseDb && window.firebaseDbFunctions) {
+            const { doc, setDoc } = window.firebaseDbFunctions;
+            await setDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'), {
+                displayName,
+                email: AuthManager.currentUser.email,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+    }
+
+    // Update avatar (stored as base64 in localStorage and Firestore)
+    static async updateAvatar(base64Image) {
+        const profile = this.getProfile();
+        profile.avatarUrl = base64Image;
+        this.saveProfile(profile);
+
+        // Also save to Firestore
+        if (AuthManager.currentUser && window.firebaseDb && window.firebaseDbFunctions) {
+            const { doc, setDoc } = window.firebaseDbFunctions;
+            await setDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'), {
+                avatarUrl: base64Image,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+    }
+
+    // Remove avatar
+    static async removeAvatar() {
+        const profile = this.getProfile();
+        profile.avatarUrl = null;
+        this.saveProfile(profile);
+
+        // Also remove from Firestore
+        if (AuthManager.currentUser && window.firebaseDb && window.firebaseDbFunctions) {
+            const { doc, setDoc } = window.firebaseDbFunctions;
+            await setDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'), {
+                avatarUrl: null,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+    }
+
+    // Load profile from Firestore (on login)
+    static async loadFromCloud() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { doc, getDoc } = window.firebaseDbFunctions;
+        try {
+            const profileDoc = await getDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'));
+            if (profileDoc.exists()) {
+                const data = profileDoc.data();
+                if (data.avatarUrl) {
+                    const profile = this.getProfile();
+                    profile.avatarUrl = data.avatarUrl;
+                    this.saveProfile(profile);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading profile from cloud:', error);
+        }
+    }
+
+    // Convert file to base64
+    static fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // Resize image to reasonable size for storage
+    static async resizeImage(base64, maxSize = 200) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Calculate new dimensions
+                if (width > height) {
+                    if (width > maxSize) {
+                        height *= maxSize / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width *= maxSize / height;
+                        height = maxSize;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            img.src = base64;
+        });
+    }
+}
+
+// ============================================================================
 // Push Notification Manager (FCM)
 // ============================================================================
 
@@ -1819,6 +1956,246 @@ function setupLinkingHandlers() {
             }
         });
     }
+
+    // Setup profile editing handlers
+    setupProfileHandlers();
+}
+
+// Profile editing handlers
+function setupProfileHandlers() {
+    // Open edit profile modal
+    const editProfileBtn = document.getElementById('editProfileBtn');
+    if (editProfileBtn) {
+        editProfileBtn.addEventListener('click', () => {
+            openEditProfileModal();
+        });
+    }
+
+    // Close edit profile modal
+    const closeEditProfile = document.getElementById('closeEditProfile');
+    if (closeEditProfile) {
+        closeEditProfile.addEventListener('click', () => {
+            ScreenManager.hideModal('editProfileModal');
+        });
+    }
+
+    const cancelEditProfile = document.getElementById('cancelEditProfile');
+    if (cancelEditProfile) {
+        cancelEditProfile.addEventListener('click', () => {
+            ScreenManager.hideModal('editProfileModal');
+        });
+    }
+
+    // Upload avatar button
+    const uploadAvatarBtn = document.getElementById('uploadAvatarBtn');
+    const avatarFileInput = document.getElementById('avatarFileInput');
+    if (uploadAvatarBtn && avatarFileInput) {
+        uploadAvatarBtn.addEventListener('click', () => {
+            avatarFileInput.click();
+        });
+
+        avatarFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image must be less than 5MB');
+                return;
+            }
+
+            try {
+                const base64 = await ProfileManager.fileToBase64(file);
+                const resized = await ProfileManager.resizeImage(base64, 200);
+
+                // Update preview in modal
+                const avatarDiv = document.getElementById('profileEditAvatar');
+                const avatarImg = document.getElementById('profileEditAvatarImg');
+
+                if (avatarImg) {
+                    avatarImg.src = resized;
+                    avatarImg.style.display = 'block';
+                }
+                if (avatarDiv) {
+                    avatarDiv.style.display = 'none';
+                }
+
+                // Show remove button
+                const removeBtn = document.getElementById('removeAvatarBtn');
+                if (removeBtn) removeBtn.style.display = 'block';
+
+                // Store temporarily until save
+                avatarFileInput.dataset.pendingAvatar = resized;
+            } catch (error) {
+                console.error('Error processing image:', error);
+                alert('Error processing image');
+            }
+        });
+    }
+
+    // Remove avatar button
+    const removeAvatarBtn = document.getElementById('removeAvatarBtn');
+    if (removeAvatarBtn) {
+        removeAvatarBtn.addEventListener('click', () => {
+            const avatarDiv = document.getElementById('profileEditAvatar');
+            const avatarImg = document.getElementById('profileEditAvatarImg');
+            const avatarFileInput = document.getElementById('avatarFileInput');
+
+            if (avatarImg) avatarImg.style.display = 'none';
+            if (avatarDiv) {
+                avatarDiv.style.display = 'flex';
+                const initial = (AuthManager.currentUser?.displayName || AuthManager.currentUser?.email || 'U').charAt(0).toUpperCase();
+                avatarDiv.textContent = initial;
+            }
+            removeAvatarBtn.style.display = 'none';
+
+            // Mark for removal
+            if (avatarFileInput) {
+                avatarFileInput.dataset.pendingAvatar = 'remove';
+            }
+        });
+    }
+
+    // Save profile button
+    const saveProfileBtn = document.getElementById('saveProfileBtn');
+    if (saveProfileBtn) {
+        saveProfileBtn.addEventListener('click', async () => {
+            const displayName = document.getElementById('editDisplayName').value.trim();
+            const errorEl = document.getElementById('profileEditError');
+            const avatarFileInput = document.getElementById('avatarFileInput');
+
+            if (!displayName) {
+                errorEl.textContent = 'Display name is required';
+                return;
+            }
+
+            saveProfileBtn.classList.add('loading');
+            saveProfileBtn.disabled = true;
+            errorEl.textContent = '';
+
+            try {
+                // Update display name
+                await ProfileManager.updateDisplayName(displayName);
+
+                // Handle avatar
+                const pendingAvatar = avatarFileInput?.dataset.pendingAvatar;
+                if (pendingAvatar === 'remove') {
+                    await ProfileManager.removeAvatar();
+                } else if (pendingAvatar) {
+                    await ProfileManager.updateAvatar(pendingAvatar);
+                }
+
+                // Clear pending state
+                if (avatarFileInput) {
+                    delete avatarFileInput.dataset.pendingAvatar;
+                    avatarFileInput.value = '';
+                }
+
+                // Update main UI
+                updateProfileUI();
+
+                ScreenManager.hideModal('editProfileModal');
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                errorEl.textContent = error.message || 'Error saving profile';
+            } finally {
+                saveProfileBtn.classList.remove('loading');
+                saveProfileBtn.disabled = false;
+            }
+        });
+    }
+}
+
+// Open edit profile modal and populate with current data
+function openEditProfileModal() {
+    if (!AuthManager.currentUser) return;
+
+    const user = AuthManager.currentUser;
+    const profile = ProfileManager.getProfile();
+
+    // Set display name
+    const displayNameInput = document.getElementById('editDisplayName');
+    if (displayNameInput) {
+        displayNameInput.value = user.displayName || '';
+    }
+
+    // Set email (read-only)
+    const emailInput = document.getElementById('editEmail');
+    if (emailInput) {
+        emailInput.value = user.email || '';
+    }
+
+    // Set avatar
+    const avatarDiv = document.getElementById('profileEditAvatar');
+    const avatarImg = document.getElementById('profileEditAvatarImg');
+    const removeBtn = document.getElementById('removeAvatarBtn');
+
+    if (profile.avatarUrl) {
+        if (avatarImg) {
+            avatarImg.src = profile.avatarUrl;
+            avatarImg.style.display = 'block';
+        }
+        if (avatarDiv) avatarDiv.style.display = 'none';
+        if (removeBtn) removeBtn.style.display = 'block';
+    } else {
+        if (avatarImg) avatarImg.style.display = 'none';
+        if (avatarDiv) {
+            avatarDiv.style.display = 'flex';
+            const initial = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+            avatarDiv.textContent = initial;
+        }
+        if (removeBtn) removeBtn.style.display = 'none';
+    }
+
+    // Clear any pending avatar changes
+    const avatarFileInput = document.getElementById('avatarFileInput');
+    if (avatarFileInput) {
+        delete avatarFileInput.dataset.pendingAvatar;
+        avatarFileInput.value = '';
+    }
+
+    // Clear error
+    const errorEl = document.getElementById('profileEditError');
+    if (errorEl) errorEl.textContent = '';
+
+    ScreenManager.showModal('editProfileModal');
+}
+
+// Update profile UI elements after save
+function updateProfileUI() {
+    const user = AuthManager.currentUser;
+    const profile = ProfileManager.getProfile();
+
+    // Update main avatar
+    const userAvatar = document.getElementById('userAvatar');
+    const userAvatarImg = document.getElementById('userAvatarImg');
+
+    if (profile.avatarUrl) {
+        if (userAvatarImg) {
+            userAvatarImg.src = profile.avatarUrl;
+            userAvatarImg.style.display = 'block';
+        }
+        if (userAvatar) userAvatar.style.display = 'none';
+    } else {
+        if (userAvatarImg) userAvatarImg.style.display = 'none';
+        if (userAvatar) {
+            userAvatar.style.display = 'flex';
+            const initial = (user?.displayName || user?.email || 'U').charAt(0).toUpperCase();
+            userAvatar.textContent = initial;
+        }
+    }
+
+    // Update name
+    const userName = document.getElementById('userName');
+    if (userName && user) {
+        userName.textContent = user.displayName || 'User';
+    }
 }
 
 function updateCodeExpiry(expiresAt) {
@@ -2034,6 +2411,7 @@ function updateUIForAuthState(user) {
     const guestModeNotice = document.getElementById('guestModeNotice');
     const linkedContactsSection = document.getElementById('linkedContactsSection');
     const userAvatar = document.getElementById('userAvatar');
+    const userAvatarImg = document.getElementById('userAvatarImg');
     const userName = document.getElementById('userName');
     const userEmail = document.getElementById('userEmail');
 
@@ -2043,11 +2421,28 @@ function updateUIForAuthState(user) {
         if (guestModeNotice) guestModeNotice.style.display = 'none';
         if (linkedContactsSection) linkedContactsSection.style.display = 'block';
 
+        // Load profile from cloud and update UI
+        ProfileManager.loadFromCloud().then(() => {
+            const profile = ProfileManager.getProfile();
+
+            // Update avatar display
+            if (profile.avatarUrl) {
+                if (userAvatarImg) {
+                    userAvatarImg.src = profile.avatarUrl;
+                    userAvatarImg.style.display = 'block';
+                }
+                if (userAvatar) userAvatar.style.display = 'none';
+            } else {
+                if (userAvatarImg) userAvatarImg.style.display = 'none';
+                if (userAvatar) {
+                    userAvatar.style.display = 'flex';
+                    const initial = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+                    userAvatar.textContent = initial;
+                }
+            }
+        });
+
         // Update user info
-        if (userAvatar) {
-            const initial = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
-            userAvatar.textContent = initial;
-        }
         if (userName) userName.textContent = user.displayName || 'User';
         if (userEmail) userEmail.textContent = user.email;
 
