@@ -420,6 +420,38 @@
     cursor: pointer;
 }
 
+.linked-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.contacts-section {
+    margin-bottom: 1rem;
+}
+
+.contacts-section-title {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.support-badge {
+    background: #22c55e;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.linked-contact {
+    border-color: rgba(34, 197, 94, 0.5);
+}
+
 .support-name {
     font-weight: bold;
     color: white;
