@@ -4,8 +4,9 @@
 // ============================================================================
 // Data Structures & Configuration
 // ============================================================================
+// These reference FLARES_CONFIG from config.js - edit that file to customize
 
-const EMOJI_DATA = {
+const EMOJI_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.emojis : {
     green: [
         { emoji: '😊', label: 'Happy' },
         { emoji: '😌', label: 'Calm' },
@@ -38,7 +39,7 @@ const EMOJI_DATA = {
     ]
 };
 
-const TRIGGERS_DATA = {
+const TRIGGERS_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.triggers : {
     green: [
         { id: 'good_news', label: 'Good news', icon: '📰' },
         { id: 'social_time', label: 'Quality time with others', icon: '👥' },
@@ -72,7 +73,7 @@ const TRIGGERS_DATA = {
 };
 
 // Common emoji list for picker
-const COMMON_EMOJIS = [
+const COMMON_EMOJIS = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.commonEmojis : [
     '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇',
     '🥰', '😍', '🤩', '😘', '😗', '☺️', '😚', '😙', '😋', '😛', '😜', '🤪', '😝',
     '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄',
@@ -402,6 +403,546 @@ class CloudStorageManager {
         } catch (error) {
             console.error('Error adding history entry:', error);
         }
+    }
+}
+
+// ============================================================================
+// Push Notification Manager (FCM)
+// ============================================================================
+
+class PushNotificationManager {
+    static fcmToken = null;
+
+    static async init() {
+        if (!window.firebaseMessaging || !window.firebaseMessagingFunctions) {
+            console.warn('FCM not available');
+            return;
+        }
+
+        // Request notification permission
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                await this.getAndSaveToken();
+                this.setupForegroundHandler();
+            }
+        } catch (error) {
+            console.error('Error requesting notification permission:', error);
+        }
+    }
+
+    static async getAndSaveToken() {
+        if (!window.firebaseMessaging || !window.firebaseMessagingFunctions) return null;
+
+        try {
+            const { getToken } = window.firebaseMessagingFunctions;
+            // You'll need to add your VAPID key from Firebase Console > Cloud Messaging
+            const token = await getToken(window.firebaseMessaging, {
+                vapidKey: 'YOUR_VAPID_KEY' // Replace with actual VAPID key
+            });
+
+            if (token) {
+                this.fcmToken = token;
+                // Save token to user's Firestore document
+                if (AuthManager.currentUser) {
+                    await this.saveTokenToFirestore(token);
+                }
+                console.log('FCM Token:', token);
+                return token;
+            }
+        } catch (error) {
+            console.error('Error getting FCM token:', error);
+        }
+        return null;
+    }
+
+    static async saveTokenToFirestore(token) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) return;
+
+        const { doc, setDoc } = window.firebaseDbFunctions;
+        const userDocRef = doc(window.firebaseDb, 'users', AuthManager.currentUser.uid);
+
+        await setDoc(userDocRef, {
+            fcmToken: token,
+            tokenUpdatedAt: new Date().toISOString()
+        }, { merge: true });
+    }
+
+    static setupForegroundHandler() {
+        if (!window.firebaseMessaging || !window.firebaseMessagingFunctions) return;
+
+        const { onMessage } = window.firebaseMessagingFunctions;
+        onMessage(window.firebaseMessaging, (payload) => {
+            console.log('Foreground message received:', payload);
+
+            // Show in-app notification
+            this.showInAppNotification(payload);
+        });
+    }
+
+    static showInAppNotification(payload) {
+        // Create a toast notification
+        const toast = document.createElement('div');
+        toast.className = 'flare-toast';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <div class="toast-icon">${payload.data?.mood === 'red' ? '🔴' : payload.data?.mood === 'orange' ? '🟠' : '🟢'}</div>
+                <div class="toast-text">
+                    <strong>${payload.notification?.title || 'Flare Received'}</strong>
+                    <p>${payload.notification?.body || 'Someone sent you a flare'}</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+
+        // Remove after 5 seconds
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+}
+
+// ============================================================================
+// Linking Manager (Connect users via codes)
+// ============================================================================
+
+class LinkingManager {
+    static LINK_CODE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+
+    // Generate a 6-digit link code
+    static generateLinkCode() {
+        return Math.random().toString().slice(2, 8);
+    }
+
+    // Create a link code for the current user
+    static async createLinkCode() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            throw new Error('Must be logged in to create a link code');
+        }
+
+        const { doc, setDoc } = window.firebaseDbFunctions;
+        const code = this.generateLinkCode();
+        const expiresAt = Date.now() + this.LINK_CODE_EXPIRY;
+
+        // Store the link code in Firestore
+        const linkCodeRef = doc(window.firebaseDb, 'linkCodes', code);
+        await setDoc(linkCodeRef, {
+            userId: AuthManager.currentUser.uid,
+            displayName: AuthManager.currentUser.displayName || 'User',
+            email: AuthManager.currentUser.email,
+            createdAt: new Date().toISOString(),
+            expiresAt: expiresAt
+        });
+
+        return { code, expiresAt };
+    }
+
+    // Link with another user using their code
+    static async linkWithCode(code) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            throw new Error('Must be logged in to link');
+        }
+
+        const { doc, getDoc, setDoc, deleteDoc } = window.firebaseDbFunctions;
+
+        // Get the link code document
+        const linkCodeRef = doc(window.firebaseDb, 'linkCodes', code);
+        const linkCodeDoc = await getDoc(linkCodeRef);
+
+        if (!linkCodeDoc.exists()) {
+            throw new Error('Invalid or expired link code');
+        }
+
+        const linkData = linkCodeDoc.data();
+
+        // Check if expired
+        if (Date.now() > linkData.expiresAt) {
+            await deleteDoc(linkCodeRef);
+            throw new Error('Link code has expired');
+        }
+
+        // Can't link with yourself
+        if (linkData.userId === AuthManager.currentUser.uid) {
+            throw new Error("You can't link with yourself");
+        }
+
+        // Create bidirectional link
+        const myUid = AuthManager.currentUser.uid;
+        const theirUid = linkData.userId;
+
+        // Add them to my linked contacts
+        const myLinksRef = doc(window.firebaseDb, 'users', myUid, 'linkedContacts', theirUid);
+        await setDoc(myLinksRef, {
+            userId: theirUid,
+            displayName: linkData.displayName,
+            email: linkData.email,
+            linkedAt: new Date().toISOString()
+        });
+
+        // Add me to their linked contacts
+        const theirLinksRef = doc(window.firebaseDb, 'users', theirUid, 'linkedContacts', myUid);
+        await setDoc(theirLinksRef, {
+            userId: myUid,
+            displayName: AuthManager.currentUser.displayName || 'User',
+            email: AuthManager.currentUser.email,
+            linkedAt: new Date().toISOString()
+        });
+
+        // Delete the used link code
+        await deleteDoc(linkCodeRef);
+
+        return {
+            userId: theirUid,
+            displayName: linkData.displayName,
+            email: linkData.email
+        };
+    }
+
+    // Get all linked contacts
+    static async getLinkedContacts() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return [];
+        }
+
+        const { collection, getDocs } = window.firebaseDbFunctions;
+
+        try {
+            const linksRef = collection(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'linkedContacts');
+            const snapshot = await getDocs(linksRef);
+
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        } catch (error) {
+            console.error('Error getting linked contacts:', error);
+            return [];
+        }
+    }
+
+    // Remove a linked contact
+    static async unlinkContact(contactId) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { doc, deleteDoc } = window.firebaseDbFunctions;
+        const myUid = AuthManager.currentUser.uid;
+
+        // Remove from my links
+        const myLinkRef = doc(window.firebaseDb, 'users', myUid, 'linkedContacts', contactId);
+        await deleteDoc(myLinkRef);
+
+        // Remove me from their links
+        const theirLinkRef = doc(window.firebaseDb, 'users', contactId, 'linkedContacts', myUid);
+        await deleteDoc(theirLinkRef);
+    }
+
+    // Send a Flare notification to all linked contacts
+    static async sendFlareToLinkedContacts(sessionData) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { collection, addDoc } = window.firebaseDbFunctions;
+        const linkedContacts = await this.getLinkedContacts();
+
+        if (linkedContacts.length === 0) {
+            console.log('No linked contacts to notify');
+            return;
+        }
+
+        const moodLabels = {
+            green: 'Stable',
+            orange: 'Struggling',
+            red: 'Overwhelmed'
+        };
+
+        const senderName = AuthManager.currentUser.displayName || 'Someone';
+
+        // Write directly to each recipient's inbox for real-time notifications
+        for (const contact of linkedContacts) {
+            try {
+                // Write to recipient's inbox subcollection
+                await addDoc(collection(window.firebaseDb, 'users', contact.userId, 'inbox'), {
+                    senderId: AuthManager.currentUser.uid,
+                    senderName: senderName,
+                    type: 'flare',
+                    mood: sessionData.mood,
+                    title: `${senderName} sent a ${moodLabels[sessionData.mood]} Flare`,
+                    body: sessionData.emojis.map(e => e.emoji).join(' ') || 'Check on them',
+                    emojis: sessionData.emojis,
+                    triggers: sessionData.triggers,
+                    timestamp: sessionData.timestamp,
+                    createdAt: new Date().toISOString(),
+                    read: false
+                });
+                console.log(`Sent flare to ${contact.name}'s inbox`);
+            } catch (error) {
+                console.error(`Error sending flare to ${contact.userId}:`, error);
+            }
+        }
+
+        console.log(`Sent flares to ${linkedContacts.length} contacts`);
+    }
+}
+
+// ============================================================================
+// Inbox Manager - Real-time notifications via Firestore
+// ============================================================================
+
+class InboxManager {
+    static unsubscribe = null;
+    static isListening = false;
+
+    // Start listening for incoming flares
+    static startListening() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        if (this.isListening) {
+            console.log('Already listening to inbox');
+            return;
+        }
+
+        const { collection, query, orderBy, onSnapshot } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const inboxQuery = query(inboxRef, orderBy('createdAt', 'desc'));
+
+        console.log('Starting inbox listener...');
+
+        this.unsubscribe = onSnapshot(inboxQuery, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const flare = { id: change.doc.id, ...change.doc.data() };
+
+                    // Only show notification for new unread flares
+                    // Skip if this is initial load (older than 30 seconds)
+                    const createdAt = new Date(flare.createdAt);
+                    const now = new Date();
+                    const isRecent = (now - createdAt) < 30000; // 30 seconds
+
+                    if (!flare.read && isRecent) {
+                        this.showFlareNotification(flare);
+                    }
+                }
+            });
+        }, (error) => {
+            console.error('Inbox listener error:', error);
+        });
+
+        this.isListening = true;
+        console.log('Inbox listener started');
+    }
+
+    // Stop listening
+    static stopListening() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+            this.isListening = false;
+            console.log('Inbox listener stopped');
+        }
+    }
+
+    // Check for pending (unread) flares on app load
+    static async checkPendingFlares() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { collection, query, where, getDocs, orderBy } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const pendingQuery = query(inboxRef, where('read', '==', false), orderBy('createdAt', 'desc'));
+
+        try {
+            const snapshot = await getDocs(pendingQuery);
+            const pendingFlares = [];
+
+            snapshot.forEach((doc) => {
+                pendingFlares.push({ id: doc.id, ...doc.data() });
+            });
+
+            if (pendingFlares.length > 0) {
+                console.log(`Found ${pendingFlares.length} pending flares`);
+                // Show notification for the most recent pending flare
+                this.showFlareNotification(pendingFlares[0], pendingFlares.length);
+            }
+        } catch (error) {
+            console.error('Error checking pending flares:', error);
+        }
+    }
+
+    // Show in-app notification for a flare
+    static showFlareNotification(flare, totalPending = 1) {
+        const moodColors = {
+            green: '#22c55e',
+            orange: '#f97316',
+            red: '#ef4444'
+        };
+
+        const title = totalPending > 1
+            ? `${totalPending} new Flares received`
+            : flare.title;
+
+        const body = totalPending > 1
+            ? `Latest: ${flare.senderName} - ${flare.body}`
+            : flare.body;
+
+        // Show toast notification
+        this.showToast(title, body, moodColors[flare.mood] || '#6366f1', flare);
+    }
+
+    // Show toast notification UI
+    static showToast(title, body, color, flare) {
+        // Remove existing toast if any
+        const existingToast = document.querySelector('.flare-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'flare-toast';
+        toast.innerHTML = `
+            <div class="flare-toast-content" style="border-left-color: ${color}">
+                <div class="flare-toast-header">
+                    <span class="flare-toast-title">${title}</span>
+                    <button class="flare-toast-close">&times;</button>
+                </div>
+                <div class="flare-toast-body">${body}</div>
+                <div class="flare-toast-actions">
+                    <button class="flare-toast-view">View</button>
+                    <button class="flare-toast-dismiss">Dismiss</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => toast.classList.add('show'), 10);
+
+        // Event handlers
+        toast.querySelector('.flare-toast-close').addEventListener('click', () => {
+            this.dismissToast(toast);
+        });
+
+        toast.querySelector('.flare-toast-dismiss').addEventListener('click', () => {
+            this.markAsRead(flare.id);
+            this.dismissToast(toast);
+        });
+
+        toast.querySelector('.flare-toast-view').addEventListener('click', () => {
+            this.markAsRead(flare.id);
+            this.dismissToast(toast);
+            this.showFlareDetails(flare);
+        });
+
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                this.dismissToast(toast);
+            }
+        }, 10000);
+    }
+
+    // Dismiss toast with animation
+    static dismissToast(toast) {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }
+
+    // Mark a flare as read
+    static async markAsRead(flareId) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { doc, updateDoc } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+
+        try {
+            await updateDoc(doc(window.firebaseDb, 'users', userId, 'inbox', flareId), {
+                read: true
+            });
+            console.log('Marked flare as read:', flareId);
+        } catch (error) {
+            console.error('Error marking flare as read:', error);
+        }
+    }
+
+    // Show flare details modal
+    static showFlareDetails(flare) {
+        const moodLabels = {
+            green: 'Stable',
+            orange: 'Struggling',
+            red: 'Overwhelmed'
+        };
+
+        const moodColors = {
+            green: '#22c55e',
+            orange: '#f97316',
+            red: '#ef4444'
+        };
+
+        // Remove existing modal if any
+        const existingModal = document.querySelector('.flare-detail-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'flare-detail-modal';
+
+        const emojisHtml = flare.emojis && flare.emojis.length > 0
+            ? `<div class="flare-detail-emojis">${flare.emojis.map(e => e.emoji).join(' ')}</div>`
+            : '';
+
+        const triggersHtml = flare.triggers && flare.triggers.length > 0
+            ? `<div class="flare-detail-triggers">
+                <span class="triggers-label">Triggers:</span>
+                ${flare.triggers.map(t => `<span class="trigger-tag">${t.icon} ${t.label}</span>`).join('')}
+               </div>`
+            : '';
+
+        const timestamp = new Date(flare.timestamp || flare.createdAt);
+        const timeString = timestamp.toLocaleString();
+
+        modal.innerHTML = `
+            <div class="flare-detail-overlay"></div>
+            <div class="flare-detail-content">
+                <div class="flare-detail-header" style="background-color: ${moodColors[flare.mood]}">
+                    <h3>${flare.senderName}'s Flare</h3>
+                    <span class="flare-mood-badge">${moodLabels[flare.mood]}</span>
+                </div>
+                <div class="flare-detail-body">
+                    ${emojisHtml}
+                    ${triggersHtml}
+                    <div class="flare-detail-time">${timeString}</div>
+                </div>
+                <div class="flare-detail-footer">
+                    <button class="flare-detail-close">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Animate in
+        setTimeout(() => modal.classList.add('show'), 10);
+
+        // Close handlers
+        const closeModal = () => {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300);
+        };
+
+        modal.querySelector('.flare-detail-overlay').addEventListener('click', closeModal);
+        modal.querySelector('.flare-detail-close').addEventListener('click', closeModal);
     }
 }
 
@@ -879,6 +1420,11 @@ async function initApp() {
         }
 
         await appState.save();
+
+        // Send push notifications to linked contacts
+        await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
+
+        // Send email to selected supports
         NotificationManager.sendViaEmail(appState.sessionData, selectedSupports);
 
         ScreenManager.showModal('successModal');
@@ -887,6 +1433,11 @@ async function initApp() {
     // Send notification via SMS
     document.getElementById('sendViaSMS').addEventListener('click', async () => {
         await appState.save();
+
+        // Send push notifications to linked contacts
+        await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
+
+        // Open SMS app
         NotificationManager.sendViaSMS(appState.sessionData);
         ScreenManager.showModal('successModal');
     });
@@ -965,6 +1516,9 @@ async function initApp() {
             UIRenderer.renderHistory();
         }
     });
+
+    // Linking System Handlers
+    setupLinkingHandlers();
 
     // Custom Emojis Management
     document.getElementById('manageCustomEmojisBtn').addEventListener('click', () => {
@@ -1171,6 +1725,155 @@ function deleteCustomTrigger(id) {
     }
 }
 
+// ============================================================================
+// Linking System Handlers
+// ============================================================================
+
+function setupLinkingHandlers() {
+    // Generate link code
+    const generateBtn = document.getElementById('generateLinkCodeBtn');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', async () => {
+            try {
+                const { code, expiresAt } = await LinkingManager.createLinkCode();
+                document.querySelector('#linkCodeDisplay .link-code').textContent = code;
+
+                // Update expiry countdown
+                updateCodeExpiry(expiresAt);
+
+                ScreenManager.showModal('generateCodeModal');
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    }
+
+    // Copy code button
+    const copyCodeBtn = document.getElementById('copyCodeBtn');
+    if (copyCodeBtn) {
+        copyCodeBtn.addEventListener('click', () => {
+            const code = document.querySelector('#linkCodeDisplay .link-code').textContent;
+            navigator.clipboard.writeText(code);
+            copyCodeBtn.textContent = 'Copied!';
+            setTimeout(() => copyCodeBtn.textContent = 'Copy Code', 2000);
+        });
+    }
+
+    // Close generate code modal
+    const closeGenerateCode = document.getElementById('closeGenerateCode');
+    if (closeGenerateCode) {
+        closeGenerateCode.addEventListener('click', () => {
+            ScreenManager.hideModal('generateCodeModal');
+        });
+    }
+
+    // Enter link code button
+    const enterCodeBtn = document.getElementById('enterLinkCodeBtn');
+    if (enterCodeBtn) {
+        enterCodeBtn.addEventListener('click', () => {
+            document.getElementById('linkCodeInput').value = '';
+            document.getElementById('linkCodeError').textContent = '';
+            ScreenManager.showModal('enterCodeModal');
+        });
+    }
+
+    // Close enter code modal
+    const closeEnterCode = document.getElementById('closeEnterCode');
+    if (closeEnterCode) {
+        closeEnterCode.addEventListener('click', () => {
+            ScreenManager.hideModal('enterCodeModal');
+        });
+    }
+
+    const cancelEnterCode = document.getElementById('cancelEnterCode');
+    if (cancelEnterCode) {
+        cancelEnterCode.addEventListener('click', () => {
+            ScreenManager.hideModal('enterCodeModal');
+        });
+    }
+
+    // Submit link code
+    const submitLinkCode = document.getElementById('submitLinkCode');
+    if (submitLinkCode) {
+        submitLinkCode.addEventListener('click', async () => {
+            const code = document.getElementById('linkCodeInput').value.trim();
+            const errorEl = document.getElementById('linkCodeError');
+
+            if (!code || code.length !== 6) {
+                errorEl.textContent = 'Please enter a valid 6-digit code';
+                return;
+            }
+
+            submitLinkCode.classList.add('loading');
+            errorEl.textContent = '';
+
+            try {
+                const linkedUser = await LinkingManager.linkWithCode(code);
+                ScreenManager.hideModal('enterCodeModal');
+                alert(`Successfully linked with ${linkedUser.displayName}!`);
+                renderLinkedContactsList();
+            } catch (error) {
+                errorEl.textContent = error.message;
+            } finally {
+                submitLinkCode.classList.remove('loading');
+            }
+        });
+    }
+}
+
+function updateCodeExpiry(expiresAt) {
+    const expiryEl = document.getElementById('linkCodeExpiry');
+    if (!expiryEl) return;
+
+    const updateTimer = () => {
+        const remaining = expiresAt - Date.now();
+        if (remaining <= 0) {
+            expiryEl.textContent = 'Code expired';
+            return;
+        }
+
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        expiryEl.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        if (remaining > 0) {
+            setTimeout(updateTimer, 1000);
+        }
+    };
+
+    updateTimer();
+}
+
+async function renderLinkedContactsList() {
+    const list = document.getElementById('linkedContactsList');
+    if (!list) return;
+
+    const linkedContacts = await LinkingManager.getLinkedContacts();
+
+    if (linkedContacts.length === 0) {
+        list.innerHTML = '<p class="empty-state">No linked contacts yet. Generate a code or enter someone\'s code to connect!</p>';
+        return;
+    }
+
+    list.innerHTML = linkedContacts.map(contact => `
+        <div class="linked-contact-item">
+            <div class="linked-contact-avatar">${(contact.displayName || 'U').charAt(0).toUpperCase()}</div>
+            <div class="linked-contact-info">
+                <div class="linked-contact-name">${contact.displayName || 'User'}</div>
+                <div class="linked-contact-email">${contact.email || ''}</div>
+            </div>
+            <button class="btn-icon-delete" onclick="unlinkContact('${contact.id}')">×</button>
+        </div>
+    `).join('');
+}
+
+async function unlinkContact(contactId) {
+    if (confirm('Are you sure you want to unlink this contact?')) {
+        await LinkingManager.unlinkContact(contactId);
+        renderLinkedContactsList();
+    }
+}
+
 function showSharedDataView(data) {
     // Show a special view for shared links
     document.querySelector('.flares-app').innerHTML = `
@@ -1329,14 +2032,16 @@ function setupAuthHandlers() {
 function updateUIForAuthState(user) {
     const userProfileSection = document.getElementById('userProfileSection');
     const guestModeNotice = document.getElementById('guestModeNotice');
+    const linkedContactsSection = document.getElementById('linkedContactsSection');
     const userAvatar = document.getElementById('userAvatar');
     const userName = document.getElementById('userName');
     const userEmail = document.getElementById('userEmail');
 
     if (user) {
-        // Logged in - show profile
+        // Logged in - show profile and linked contacts
         if (userProfileSection) userProfileSection.style.display = 'block';
         if (guestModeNotice) guestModeNotice.style.display = 'none';
+        if (linkedContactsSection) linkedContactsSection.style.display = 'block';
 
         // Update user info
         if (userAvatar) {
@@ -1345,14 +2050,30 @@ function updateUIForAuthState(user) {
         }
         if (userName) userName.textContent = user.displayName || 'User';
         if (userEmail) userEmail.textContent = user.email;
+
+        // Initialize push notifications and render linked contacts
+        PushNotificationManager.init();
+        renderLinkedContactsList();
+
+        // Start listening for incoming flares and check for pending ones
+        InboxManager.startListening();
+        InboxManager.checkPendingFlares();
     } else if (AuthManager.isGuest) {
-        // Guest mode - show notice
+        // Guest mode - show notice, hide linked contacts
         if (userProfileSection) userProfileSection.style.display = 'none';
         if (guestModeNotice) guestModeNotice.style.display = 'block';
+        if (linkedContactsSection) linkedContactsSection.style.display = 'none';
+
+        // Stop inbox listener for guest mode
+        InboxManager.stopListening();
     } else {
-        // Not logged in, not guest - hide both
+        // Not logged in, not guest - hide all
         if (userProfileSection) userProfileSection.style.display = 'none';
+        if (linkedContactsSection) linkedContactsSection.style.display = 'none';
         if (guestModeNotice) guestModeNotice.style.display = 'none';
+
+        // Stop inbox listener when logged out
+        InboxManager.stopListening();
     }
 }
 

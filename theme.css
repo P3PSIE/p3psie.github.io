@@ -1,0 +1,206 @@
+/* ============================================================================
+   Flares Theme Configuration
+   ============================================================================
+   Edit these CSS variables to customize the app's appearance.
+   Colors, fonts, spacing, and more can all be changed here.
+*/
+
+:root {
+    /* ========================================================================
+       Mood Colors
+       ======================================================================== */
+
+    /* Green (Stable) */
+    --mood-green: #22c55e;
+    --mood-green-light: #dcfce7;
+    --mood-green-dark: #16a34a;
+    --mood-green-glow: rgba(34, 197, 94, 0.3);
+
+    /* Orange (Struggling) */
+    --mood-orange: #f97316;
+    --mood-orange-light: #ffedd5;
+    --mood-orange-dark: #ea580c;
+    --mood-orange-glow: rgba(249, 115, 22, 0.3);
+
+    /* Red (Overwhelmed) */
+    --mood-red: #ef4444;
+    --mood-red-light: #fee2e2;
+    --mood-red-dark: #dc2626;
+    --mood-red-glow: rgba(239, 68, 68, 0.3);
+
+    /* ========================================================================
+       Brand Colors
+       ======================================================================== */
+    --primary: #6366f1;
+    --primary-light: #818cf8;
+    --primary-dark: #4f46e5;
+    --primary-glow: rgba(99, 102, 241, 0.3);
+
+    --secondary: #8b5cf6;
+    --secondary-light: #a78bfa;
+    --secondary-dark: #7c3aed;
+
+    /* ========================================================================
+       Neutral Colors
+       ======================================================================== */
+    --white: #ffffff;
+    --black: #000000;
+
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+
+    /* ========================================================================
+       Semantic Colors
+       ======================================================================== */
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+
+    /* ========================================================================
+       Background Colors
+       ======================================================================== */
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+
+    /* ========================================================================
+       Text Colors
+       ======================================================================== */
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --text-tertiary: #6b7280;
+    --text-muted: #9ca3af;
+    --text-inverse: #ffffff;
+
+    /* ========================================================================
+       Border Colors
+       ======================================================================== */
+    --border-light: #e5e7eb;
+    --border-medium: #d1d5db;
+    --border-dark: #9ca3af;
+
+    /* ========================================================================
+       Typography
+       ======================================================================== */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    --font-family-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;   /* 14px */
+    --font-size-base: 1rem;     /* 16px */
+    --font-size-lg: 1.125rem;   /* 18px */
+    --font-size-xl: 1.25rem;    /* 20px */
+    --font-size-2xl: 1.5rem;    /* 24px */
+    --font-size-3xl: 1.875rem;  /* 30px */
+    --font-size-4xl: 2.25rem;   /* 36px */
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+
+    /* ========================================================================
+       Spacing
+       ======================================================================== */
+    --spacing-1: 0.25rem;   /* 4px */
+    --spacing-2: 0.5rem;    /* 8px */
+    --spacing-3: 0.75rem;   /* 12px */
+    --spacing-4: 1rem;      /* 16px */
+    --spacing-5: 1.25rem;   /* 20px */
+    --spacing-6: 1.5rem;    /* 24px */
+    --spacing-8: 2rem;      /* 32px */
+    --spacing-10: 2.5rem;   /* 40px */
+    --spacing-12: 3rem;     /* 48px */
+    --spacing-16: 4rem;     /* 64px */
+
+    /* ========================================================================
+       Border Radius
+       ======================================================================== */
+    --radius-sm: 0.25rem;   /* 4px */
+    --radius-md: 0.5rem;    /* 8px */
+    --radius-lg: 0.75rem;   /* 12px */
+    --radius-xl: 1rem;      /* 16px */
+    --radius-2xl: 1.5rem;   /* 24px */
+    --radius-full: 9999px;
+
+    /* ========================================================================
+       Shadows
+       ======================================================================== */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+    /* ========================================================================
+       Transitions
+       ======================================================================== */
+    --transition-fast: 150ms ease;
+    --transition-normal: 200ms ease;
+    --transition-slow: 300ms ease;
+
+    /* ========================================================================
+       Z-Index Scale
+       ======================================================================== */
+    --z-dropdown: 1000;
+    --z-modal: 2000;
+    --z-toast: 3000;
+    --z-tooltip: 4000;
+
+    /* ========================================================================
+       Component Specific
+       ======================================================================== */
+
+    /* Mood Buttons */
+    --mood-button-size: 120px;
+    --mood-button-size-mobile: 100px;
+
+    /* Cards */
+    --card-padding: var(--spacing-4);
+    --card-radius: var(--radius-xl);
+
+    /* Buttons */
+    --button-padding-x: var(--spacing-6);
+    --button-padding-y: var(--spacing-3);
+    --button-radius: var(--radius-lg);
+
+    /* Emoji Grid */
+    --emoji-button-size: 60px;
+    --emoji-font-size: 1.75rem;
+}
+
+/* ============================================================================
+   Dark Mode (uncomment to enable)
+   ============================================================================ */
+/*
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #111827;
+        --bg-secondary: #1f2937;
+        --bg-tertiary: #374151;
+
+        --text-primary: #f9fafb;
+        --text-secondary: #e5e7eb;
+        --text-tertiary: #d1d5db;
+        --text-muted: #9ca3af;
+
+        --border-light: #374151;
+        --border-medium: #4b5563;
+        --border-dark: #6b7280;
+    }
+}
+*/

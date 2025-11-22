@@ -6,16 +6,21 @@
     <meta name="theme-color" content="#8b5cf6">
     <meta name="description" content="Flares - Track your mood and connect with your support network">
     <title>Flares - Mood Tracker</title>
+    <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="flares.css">
     <link rel="manifest" href="/manifest.json">
 
+    <!-- App Configuration (edit config.js to customize) -->
+    <script src="config.js"></script>
+
     <!-- Firebase SDK -->
     <script type="module">
-        // Firebase configuration - Replace with your own Firebase project config
+        // Firebase configuration
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, deleteDoc, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
         // Firebase config
         const firebaseConfig = {
@@ -33,9 +38,18 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Initialize FCM (messaging)
+        let messaging = null;
+        try {
+            messaging = getMessaging(app);
+        } catch (e) {
+            console.warn('FCM not supported in this browser:', e);
+        }
+
         // Make Firebase available globally
         window.firebaseAuth = auth;
         window.firebaseDb = db;
+        window.firebaseMessaging = messaging;
         window.firebaseAuthFunctions = {
             createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
@@ -53,7 +67,14 @@
             orderBy,
             limit,
             getDocs,
-            deleteDoc
+            deleteDoc,
+            where,
+            updateDoc,
+            onSnapshot
+        };
+        window.firebaseMessagingFunctions = {
+            getToken,
+            onMessage
         };
 
         // Dispatch event when Firebase is ready
@@ -256,6 +277,23 @@
 
                     <hr>
 
+                    <!-- Linked Contacts Section (Push Notifications) -->
+                    <div class="linked-contacts-section" id="linkedContactsSection" style="display: none;">
+                        <h3>Linked Contacts</h3>
+                        <p class="help-text">Connect with people who have Flares to send instant push notifications</p>
+
+                        <div class="link-actions">
+                            <button class="btn btn-primary" id="generateLinkCodeBtn">Generate My Code</button>
+                            <button class="btn btn-secondary" id="enterLinkCodeBtn">Enter a Code</button>
+                        </div>
+
+                        <div class="linked-contacts-list" id="linkedContactsList">
+                            <!-- Linked contacts populated dynamically -->
+                        </div>
+
+                        <hr>
+                    </div>
+
                     <h3>Customization</h3>
                     <div class="customization-buttons">
                         <button class="btn btn-secondary" id="manageCustomEmojisBtn">Manage Custom Emojis</button>
@@ -448,6 +486,46 @@
                         <button class="btn btn-primary" id="copyLinkBtn">Copy</button>
                     </div>
                     <p class="help-text small">You can send this link via text, messenger, or any app you prefer.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generate Link Code Modal -->
+        <div class="modal" id="generateCodeModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Your Link Code</h2>
+                    <button class="modal-close" id="closeGenerateCode">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Share this code with someone you want to connect with. They can enter it in their Flares app.</p>
+                    <div class="link-code-display" id="linkCodeDisplay">
+                        <span class="link-code">------</span>
+                    </div>
+                    <p class="link-code-expiry" id="linkCodeExpiry">Expires in 10 minutes</p>
+                    <button class="btn btn-primary" id="copyCodeBtn">Copy Code</button>
+                    <p class="help-text small">Once they enter this code, you'll be able to send each other Flare notifications instantly.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enter Link Code Modal -->
+        <div class="modal" id="enterCodeModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Enter Link Code</h2>
+                    <button class="modal-close" id="closeEnterCode">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Enter the 6-digit code from someone you want to connect with.</p>
+                    <div class="form-section">
+                        <input type="text" id="linkCodeInput" placeholder="Enter 6-digit code" class="input link-code-input" maxlength="6" pattern="[0-9]*" inputmode="numeric">
+                    </div>
+                    <div class="link-code-error" id="linkCodeError"></div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelEnterCode">Cancel</button>
+                        <button class="btn btn-primary" id="submitLinkCode">Link</button>
+                    </div>
                 </div>
             </div>
         </div>
