@@ -187,23 +187,23 @@ class AuthManager {
     static currentUser = null;
     static isGuest = false;
     static listeners = [];
+    static initialAuthResolved = false;
 
     static async init() {
         return new Promise((resolve) => {
             // Wait for Firebase to be ready
             if (window.firebaseAuth) {
-                this.setupAuthListener();
-                resolve();
+                this.setupAuthListener(resolve);
             } else {
                 window.addEventListener('firebaseReady', () => {
-                    this.setupAuthListener();
-                    resolve();
+                    this.setupAuthListener(resolve);
                 });
                 // Timeout fallback - if Firebase fails to load, continue as guest
                 setTimeout(() => {
                     if (!window.firebaseAuth) {
                         console.warn('Firebase not loaded, continuing in offline mode');
                         this.isGuest = true;
+                        this.initialAuthResolved = true;
                         resolve();
                     }
                 }, 5000);
@@ -211,8 +211,11 @@ class AuthManager {
         });
     }
 
-    static setupAuthListener() {
-        if (!window.firebaseAuth || !window.firebaseAuthFunctions) return;
+    static setupAuthListener(initResolve) {
+        if (!window.firebaseAuth || !window.firebaseAuthFunctions) {
+            if (initResolve) initResolve();
+            return;
+        }
 
         const { onAuthStateChanged } = window.firebaseAuthFunctions;
         onAuthStateChanged(window.firebaseAuth, (user) => {
@@ -223,6 +226,12 @@ class AuthManager {
             // Sync data when user logs in
             if (user) {
                 CloudStorageManager.syncFromCloud();
+            }
+
+            // Resolve the init promise on first auth state
+            if (!this.initialAuthResolved) {
+                this.initialAuthResolved = true;
+                if (initResolve) initResolve();
             }
         });
     }
@@ -1299,6 +1308,9 @@ class UIRenderer {
         const grid = document.getElementById('emojiGrid');
         grid.innerHTML = '';
 
+        // Set mood class on grid for styling
+        grid.className = `emoji-grid mood-${mood}`;
+
         // Combine default emojis with custom emojis for this mood
         const defaultEmojis = EMOJI_DATA[mood];
         const customEmojis = CustomEmojiManager.getEmojisForMood(mood);
@@ -1324,6 +1336,9 @@ class UIRenderer {
     static renderTriggers(mood) {
         const grid = document.getElementById('triggersGrid');
         grid.innerHTML = '';
+
+        // Set mood class on grid for styling
+        grid.className = `triggers-grid mood-${mood}`;
 
         // Combine default triggers with custom triggers
         const defaultTriggers = TRIGGERS_DATA[mood];
@@ -1457,16 +1472,116 @@ class UIRenderer {
             red: '🔴 Overwhelmed'
         };
 
-        list.innerHTML = history.map(entry => {
+        list.innerHTML = history.map((entry, index) => {
             const date = new Date(entry.timestamp).toLocaleString();
+            const historyIndex = StorageManager.getHistory().length - 1 - index;
             return `
-                <div class="history-item">
-                    <div class="history-mood">${moodLabels[entry.mood]}</div>
-                    <div class="history-time">${date}</div>
-                    <div class="history-emojis">${entry.emojis.map(e => e.emoji).join(' ')}</div>
+                <div class="history-item" data-index="${historyIndex}">
+                    <div class="history-content">
+                        <div class="history-mood">${moodLabels[entry.mood]}</div>
+                        <div class="history-time">${date}</div>
+                        <div class="history-emojis">${entry.emojis.map(e => e.emoji).join(' ')}</div>
+                    </div>
+                    <div class="history-actions">
+                        <button class="history-action-btn resend-btn" data-index="${historyIndex}" title="Resend">📤</button>
+                        <button class="history-action-btn edit-btn" data-index="${historyIndex}" title="Edit & Resend">✏️</button>
+                        <button class="history-action-btn delete-btn" data-index="${historyIndex}" title="Delete">🗑️</button>
+                    </div>
                 </div>
             `;
         }).join('');
+
+        // Add event listeners for history actions
+        list.querySelectorAll('.resend-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(btn.dataset.index);
+                HistoryActions.resend(index);
+            });
+        });
+
+        list.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(btn.dataset.index);
+                HistoryActions.edit(index);
+            });
+        });
+
+        list.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(btn.dataset.index);
+                HistoryActions.delete(index);
+            });
+        });
+    }
+}
+
+// History Actions handler
+class HistoryActions {
+    static resend(index) {
+        const history = StorageManager.getHistory();
+        const entry = history[index];
+        if (!entry) return;
+
+        // Send notifications again
+        NotificationManager.sendNotifications(entry);
+
+        // Notify linked contacts if logged in
+        if (AuthManager.currentUser) {
+            LinkingManager.sendFlareToLinkedContacts(entry);
+        }
+
+        alert('Flare resent successfully!');
+    }
+
+    static edit(index) {
+        const history = StorageManager.getHistory();
+        const entry = history[index];
+        if (!entry) return;
+
+        // Load the entry into appState and go to emoji screen for editing
+        appState.sessionData = {
+            mood: entry.mood,
+            emojis: [...entry.emojis],
+            triggers: [...(entry.triggers || [])],
+            timestamp: entry.timestamp,
+            editingIndex: index // Mark that we're editing
+        };
+
+        // Render and show emoji screen
+        UIRenderer.renderEmojis(entry.mood);
+        ScreenManager.showScreen('emojiScreen');
+
+        // Pre-select the emojis
+        setTimeout(() => {
+            entry.emojis.forEach(({ emoji }) => {
+                const btn = document.querySelector(`.emoji-btn[data-emoji="${emoji}"]`);
+                if (btn) btn.classList.add('selected');
+            });
+        }, 100);
+
+        // Close settings modal
+        ScreenManager.hideModal('settingsModal');
+    }
+
+    static delete(index) {
+        if (!confirm('Are you sure you want to delete this Flare from history?')) {
+            return;
+        }
+
+        const history = StorageManager.getHistory();
+        history.splice(index, 1);
+        localStorage.setItem('flares_history', JSON.stringify(history));
+
+        // Re-render history
+        UIRenderer.renderHistory();
+
+        // Sync to cloud if logged in
+        if (AuthManager.currentUser) {
+            CloudStorageManager.syncToCloud();
+        }
     }
 }
 
