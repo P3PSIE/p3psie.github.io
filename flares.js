@@ -90,6 +90,108 @@ const COMMON_EMOJIS = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.commo
 ];
 
 // ============================================================================
+// Haptic Feedback Utility
+// ============================================================================
+
+class Haptics {
+    static vibrate(pattern = 10) {
+        // Check if vibration API is supported
+        if ('vibrate' in navigator) {
+            navigator.vibrate(pattern);
+        }
+    }
+
+    static light() {
+        this.vibrate(10);
+    }
+
+    static medium() {
+        this.vibrate(25);
+    }
+
+    static heavy() {
+        this.vibrate([30, 10, 30]);
+    }
+
+    static success() {
+        this.vibrate([10, 50, 20]);
+    }
+
+    static error() {
+        this.vibrate([50, 30, 50, 30, 50]);
+    }
+}
+
+// ============================================================================
+// Swipe Gesture Handler
+// ============================================================================
+
+class SwipeGestures {
+    static init() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        const minSwipeDistance = 50;
+        const maxVerticalDistance = 100;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            this.handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY, minSwipeDistance, maxVerticalDistance);
+        }, { passive: true });
+    }
+
+    static handleSwipe(startX, startY, endX, endY, minDistance, maxVertical) {
+        const deltaX = endX - startX;
+        const deltaY = Math.abs(endY - startY);
+
+        // Only trigger if horizontal swipe is significant and vertical movement is small
+        if (Math.abs(deltaX) < minDistance || deltaY > maxVertical) {
+            return;
+        }
+
+        // Don't trigger swipes inside modals
+        if (document.querySelector('.modal.active')) {
+            return;
+        }
+
+        const currentScreen = document.querySelector('.screen.active');
+        if (!currentScreen) return;
+
+        if (deltaX > 0) {
+            // Swipe right = go back
+            this.triggerBack(currentScreen);
+        } else {
+            // Swipe left = go forward
+            this.triggerForward(currentScreen);
+        }
+    }
+
+    static triggerBack(currentScreen) {
+        const backBtn = currentScreen.querySelector('.btn-secondary[id^="backTo"]');
+        if (backBtn) {
+            Haptics.light();
+            backBtn.click();
+        }
+    }
+
+    static triggerForward(currentScreen) {
+        // Try to find continue/send button
+        const forwardBtn = currentScreen.querySelector('.btn-primary[id^="continueTo"], .btn-primary[id^="send"]');
+        if (forwardBtn && forwardBtn.style.display !== 'none') {
+            Haptics.light();
+            forwardBtn.click();
+        }
+    }
+}
+
+// ============================================================================
 // Custom Emoji Manager
 // ============================================================================
 
@@ -1330,6 +1432,7 @@ class UIRenderer {
                 <span class="emoji-label">${label}</span>
             `;
             btn.addEventListener('click', () => {
+                Haptics.light();
                 btn.classList.toggle('selected');
                 appState.toggleEmoji(emoji, label);
             });
@@ -1358,6 +1461,7 @@ class UIRenderer {
                 <span class="trigger-label">${label}</span>
             `;
             btn.addEventListener('click', () => {
+                Haptics.light();
                 btn.classList.toggle('selected');
                 appState.toggleTrigger(id, label, icon);
             });
@@ -1668,9 +1772,13 @@ async function initApp() {
     // Setup auth UI handlers
     setupAuthHandlers();
 
+    // Initialize swipe gestures for navigation
+    SwipeGestures.init();
+
     // Mood Selection
     document.querySelectorAll('.flare-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            Haptics.medium();
             const mood = e.currentTarget.dataset.mood;
             appState.setMood(mood);
             UIRenderer.renderEmojis(mood);
@@ -1723,6 +1831,7 @@ async function initApp() {
             // Send push notifications to selected linked contacts
             await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
 
+            Haptics.success();
             ScreenManager.showModal('successModal');
         });
     }
@@ -1748,6 +1857,7 @@ async function initApp() {
         // Send email to selected supports
         NotificationManager.sendViaEmail(appState.sessionData, selectedSupports);
 
+        Haptics.success();
         ScreenManager.showModal('successModal');
     });
 
@@ -1760,6 +1870,7 @@ async function initApp() {
 
         // Open SMS app
         NotificationManager.sendViaSMS(appState.sessionData);
+        Haptics.success();
         ScreenManager.showModal('successModal');
     });
 
