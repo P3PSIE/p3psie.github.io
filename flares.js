@@ -1274,7 +1274,9 @@ This is an automated message from Flares mood tracking app.
 
     static generateShareableLink(sessionData) {
         const baseUrl = window.location.origin + window.location.pathname;
-        const data = btoa(JSON.stringify(sessionData));
+        // Use encodeURIComponent to handle Unicode characters (emojis) before base64 encoding
+        const jsonString = JSON.stringify(sessionData);
+        const data = btoa(unescape(encodeURIComponent(jsonString)));
         return `${baseUrl}?share=${data}`;
     }
 
@@ -1284,7 +1286,9 @@ This is an automated message from Flares mood tracking app.
 
         if (shareData) {
             try {
-                return JSON.parse(atob(shareData));
+                // Decode Unicode-safe base64
+                const jsonString = decodeURIComponent(escape(atob(shareData)));
+                return JSON.parse(jsonString);
             } catch (e) {
                 console.error('Invalid share link', e);
             }
