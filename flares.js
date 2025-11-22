@@ -824,7 +824,7 @@ class LinkingManager {
                     createdAt: new Date().toISOString(),
                     read: false
                 });
-                console.log(`Sent flare to ${contact.name}'s inbox`);
+                console.log(`Sent flare to ${contact.displayName || contact.email}'s inbox`);
             } catch (error) {
                 console.error(`Error sending flare to ${contact.userId}:`, error);
             }
@@ -1441,7 +1441,7 @@ class UIRenderer {
                     ${linkedContacts.map(contact => `
                         <label class="support-item linked-contact">
                             <input type="checkbox" class="linked-checkbox" data-id="${contact.userId}" checked>
-                            <span class="support-name">${contact.name}</span>
+                            <span class="support-name">${contact.displayName || contact.email || 'User'}</span>
                             <span class="support-badge">Instant</span>
                         </label>
                     `).join('')}
