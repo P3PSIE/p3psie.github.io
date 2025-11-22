@@ -1,5 +1,5 @@
 // Service Worker for Flares - Offline support & Push Notifications
-const CACHE_NAME = 'flares-v2';
+const CACHE_NAME = 'flares-v3';
 
 const urlsToCache = [
     '/',
@@ -7,7 +7,19 @@ const urlsToCache = [
     '/styles.css',
     '/flares.css',
     '/flares.js',
+    '/config.js',
+    '/theme.css',
     '/manifest.json'
+];
+
+// Files that should always try network first (for updates)
+const networkFirstFiles = [
+    '/index.html',
+    '/flares.js',
+    '/flares.css',
+    '/styles.css',
+    '/config.js',
+    '/theme.css'
 ];
 
 // Import Firebase scripts for FCM
@@ -86,32 +98,54 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Fetch event - serve from cache when offline
+// Check if URL should use network-first strategy
+function shouldUseNetworkFirst(url) {
+    return networkFirstFiles.some(file => url.endsWith(file) || url.endsWith(file.slice(1)));
+}
+
+// Fetch event - network-first for key files, cache-first for others
 self.addEventListener('fetch', (event) => {
+    const requestUrl = new URL(event.request.url);
+
+    // Use network-first for HTML, CSS, JS files to get updates
+    if (shouldUseNetworkFirst(requestUrl.pathname)) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    // Clone and cache the fresh response
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+                    return response;
+                })
+                .catch(() => {
+                    // Network failed, try cache
+                    return caches.match(event.request);
+                })
+        );
+        return;
+    }
+
+    // Cache-first for other resources (images, fonts, etc.)
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
-                // Cache hit - return response
                 if (response) {
                     return response;
                 }
 
-                // Clone the request
                 const fetchRequest = event.request.clone();
 
                 return fetch(fetchRequest).then((response) => {
-                    // Check if valid response
                     if (!response || response.status !== 200 || response.type !== 'basic') {
                         return response;
                     }
 
-                    // Clone the response
                     const responseToCache = response.clone();
 
-                    // Cache the fetched resource
                     caches.open(CACHE_NAME)
                         .then((cache) => {
-                            // Only cache same-origin requests
                             if (event.request.url.startsWith(self.location.origin)) {
                                 cache.put(event.request, responseToCache);
                             }
@@ -123,7 +157,7 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim clients
 self.addEventListener('activate', (event) => {
     const cacheWhitelist = [CACHE_NAME];
 
@@ -137,6 +171,9 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
+        }).then(() => {
+            // Take control of all clients immediately
+            return self.clients.claim();
         })
     );
 });
