@@ -1405,6 +1405,7 @@ class UIRenderer {
         const container = document.getElementById('supportsContainer');
         const emailBtn = document.getElementById('sendNotification');
         const smsBtn = document.getElementById('sendViaSMS');
+        const linkedBtn = document.getElementById('sendToLinked');
 
         // Get linked contacts if logged in
         let linkedContacts = [];
@@ -1421,15 +1422,17 @@ class UIRenderer {
 
         if (!hasSupports && !hasLinked) {
             container.innerHTML = '<p class="empty-state">No contacts yet. Add support contacts or link with other Flares users in settings.</p>';
-            // Hide email button, show SMS button
+            // Hide all primary buttons, show SMS as fallback
+            if (linkedBtn) linkedBtn.style.display = 'none';
             emailBtn.style.display = 'none';
             smsBtn.style.display = 'inline-block';
             return;
         }
 
-        // Show email button if there are support contacts
+        // Show appropriate buttons based on contact types
+        if (linkedBtn) linkedBtn.style.display = hasLinked ? 'inline-block' : 'none';
         emailBtn.style.display = hasSupports ? 'inline-block' : 'none';
-        smsBtn.style.display = hasSupports ? 'none' : 'inline-block';
+        smsBtn.style.display = 'none'; // Hide SMS when we have contacts
 
         let html = '';
 
@@ -1699,6 +1702,27 @@ async function initApp() {
         ScreenManager.showScreen('triggersScreen');
     });
 
+    // Send Flare to linked contacts (instant push)
+    const sendToLinkedBtn = document.getElementById('sendToLinked');
+    if (sendToLinkedBtn) {
+        sendToLinkedBtn.addEventListener('click', async () => {
+            const selectedLinked = Array.from(document.querySelectorAll('.linked-checkbox:checked'))
+                .map(cb => cb.dataset.id);
+
+            if (selectedLinked.length === 0) {
+                alert('Please select at least one linked contact');
+                return;
+            }
+
+            await appState.save();
+
+            // Send push notifications to selected linked contacts
+            await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
+
+            ScreenManager.showModal('successModal');
+        });
+    }
+
     // Send notification via email
     document.getElementById('sendNotification').addEventListener('click', async () => {
         const selectedSupports = Array.from(document.querySelectorAll('.support-checkbox:checked'))
@@ -1737,9 +1761,16 @@ async function initApp() {
 
     // Share via link
     document.getElementById('shareViaLink').addEventListener('click', () => {
-        const link = NotificationManager.generateShareableLink(appState.sessionData);
-        document.getElementById('shareLink').value = link;
-        ScreenManager.showModal('shareLinkModal');
+        try {
+            const link = NotificationManager.generateShareableLink(appState.sessionData);
+            document.getElementById('shareLink').value = link;
+            ScreenManager.showModal('shareLinkModal');
+        } catch (error) {
+            console.error('Error generating share link:', error);
+            // Still show modal with a fallback message
+            document.getElementById('shareLink').value = 'Error generating link';
+            ScreenManager.showModal('shareLinkModal');
+        }
     });
 
     document.getElementById('copyLinkBtn').addEventListener('click', () => {
