@@ -241,8 +241,12 @@
                 <div class="modal-body">
                     <!-- User Profile Section -->
                     <div class="user-profile-section" id="userProfileSection" style="display: none;">
-                        <div class="user-profile-card">
-                            <div class="user-avatar" id="userAvatar">U</div>
+                        <div class="user-profile-card" id="userProfileCard">
+                            <div class="user-avatar-container">
+                                <div class="user-avatar" id="userAvatar">U</div>
+                                <img class="user-avatar-img" id="userAvatarImg" style="display: none;" alt="Profile">
+                                <button class="edit-avatar-btn" id="editProfileBtn" title="Edit Profile">✏️</button>
+                            </div>
                             <div class="user-info">
                                 <div class="user-name" id="userName">User</div>
                                 <div class="user-email" id="userEmail">user@example.com</div>
@@ -525,6 +529,47 @@
                     <div class="modal-actions">
                         <button class="btn btn-secondary" id="cancelEnterCode">Cancel</button>
                         <button class="btn btn-primary" id="submitLinkCode">Link</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Modal -->
+        <div class="modal" id="editProfileModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit Profile</h2>
+                    <button class="modal-close" id="closeEditProfile">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="profile-edit-avatar-section">
+                        <div class="profile-edit-avatar-container">
+                            <div class="profile-edit-avatar" id="profileEditAvatar">U</div>
+                            <img class="profile-edit-avatar-img" id="profileEditAvatarImg" style="display: none;" alt="Profile">
+                        </div>
+                        <div class="profile-edit-avatar-actions">
+                            <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
+                            <button class="btn btn-secondary btn-small" id="uploadAvatarBtn">Upload Photo</button>
+                            <button class="btn btn-tertiary btn-small" id="removeAvatarBtn" style="display: none;">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label" for="editDisplayName">Display Name</label>
+                        <input type="text" id="editDisplayName" placeholder="Your name" class="input">
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label" for="editEmail">Email</label>
+                        <input type="email" id="editEmail" class="input" disabled>
+                        <p class="help-text small">Email cannot be changed</p>
+                    </div>
+
+                    <div class="profile-edit-error" id="profileEditError"></div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelEditProfile">Cancel</button>
+                        <button class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
                     </div>
                 </div>
             </div>
