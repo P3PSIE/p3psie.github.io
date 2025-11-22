@@ -1401,30 +1401,71 @@ class UIRenderer {
         `;
     }
 
-    static renderSupports(supports) {
+    static async renderSupports(supports) {
         const container = document.getElementById('supportsContainer');
         const emailBtn = document.getElementById('sendNotification');
         const smsBtn = document.getElementById('sendViaSMS');
 
-        if (supports.length === 0) {
-            container.innerHTML = '<p class="empty-state">No support contacts yet. Add some in settings or send via SMS.</p>';
+        // Get linked contacts if logged in
+        let linkedContacts = [];
+        if (AuthManager.currentUser) {
+            try {
+                linkedContacts = await LinkingManager.getLinkedContacts();
+            } catch (e) {
+                console.error('Error fetching linked contacts:', e);
+            }
+        }
+
+        const hasSupports = supports.length > 0;
+        const hasLinked = linkedContacts.length > 0;
+
+        if (!hasSupports && !hasLinked) {
+            container.innerHTML = '<p class="empty-state">No contacts yet. Add support contacts or link with other Flares users in settings.</p>';
             // Hide email button, show SMS button
             emailBtn.style.display = 'none';
             smsBtn.style.display = 'inline-block';
             return;
         }
 
-        // Show email button, hide SMS button
-        emailBtn.style.display = 'inline-block';
-        smsBtn.style.display = 'none';
+        // Show email button if there are support contacts
+        emailBtn.style.display = hasSupports ? 'inline-block' : 'none';
+        smsBtn.style.display = hasSupports ? 'none' : 'inline-block';
 
-        container.innerHTML = supports.map(support => `
-            <label class="support-item">
-                <input type="checkbox" class="support-checkbox" data-id="${support.id}" checked>
-                <span class="support-name">${support.name}</span>
-                <span class="support-email">${support.email}</span>
-            </label>
-        `).join('');
+        let html = '';
+
+        // Show linked contacts first (they get instant notifications)
+        if (hasLinked) {
+            html += `
+                <div class="contacts-section">
+                    <h4 class="contacts-section-title">Linked Users (Instant)</h4>
+                    ${linkedContacts.map(contact => `
+                        <label class="support-item linked-contact">
+                            <input type="checkbox" class="linked-checkbox" data-id="${contact.userId}" checked>
+                            <span class="support-name">${contact.name}</span>
+                            <span class="support-badge">Instant</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Show email contacts
+        if (hasSupports) {
+            html += `
+                <div class="contacts-section">
+                    ${hasLinked ? '<h4 class="contacts-section-title">Email Contacts</h4>' : ''}
+                    ${supports.map(support => `
+                        <label class="support-item">
+                            <input type="checkbox" class="support-checkbox" data-id="${support.id}" checked>
+                            <span class="support-name">${support.name}</span>
+                            <span class="support-email">${support.email}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
     }
 
     static renderContactsList() {
