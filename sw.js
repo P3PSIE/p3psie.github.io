@@ -1,5 +1,5 @@
 // Service Worker for Flares - Offline support & Push Notifications
-const CACHE_NAME = 'flares-v5';
+const CACHE_NAME = 'flares-v6';
 
 const urlsToCache = [
     '/',
