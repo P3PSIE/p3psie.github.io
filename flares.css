@@ -1543,3 +1543,227 @@ hr {
         opacity: 0;
     }
 }
+
+/* ============================================================================
+   Flare Toast Notification (New System)
+   ============================================================================ */
+
+.flare-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-120%);
+    z-index: 10000;
+    transition: transform 0.3s ease;
+    width: 90%;
+    max-width: 400px;
+}
+
+.flare-toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.flare-toast-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border-left: 4px solid #6366f1;
+    overflow: hidden;
+}
+
+.flare-toast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.flare-toast-title {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.95rem;
+}
+
+.flare-toast-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.flare-toast-close:hover {
+    color: #6b7280;
+}
+
+.flare-toast-body {
+    padding: 12px 16px;
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+.flare-toast-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.flare-toast-actions button {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.flare-toast-view {
+    background: #6366f1;
+    color: white;
+    border: none;
+}
+
+.flare-toast-view:hover {
+    background: #4f46e5;
+}
+
+.flare-toast-dismiss {
+    background: white;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+}
+
+.flare-toast-dismiss:hover {
+    background: #f3f4f6;
+}
+
+/* ============================================================================
+   Flare Detail Modal
+   ============================================================================ */
+
+.flare-detail-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.flare-detail-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.flare-detail-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.flare-detail-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.flare-detail-modal.show .flare-detail-content {
+    transform: scale(1);
+}
+
+.flare-detail-header {
+    padding: 20px;
+    color: white;
+    text-align: center;
+}
+
+.flare-detail-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.flare-mood-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.flare-detail-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.flare-detail-emojis {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+}
+
+.flare-detail-triggers {
+    margin-bottom: 16px;
+}
+
+.flare-detail-triggers .triggers-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.flare-detail-triggers .trigger-tag {
+    display: inline-block;
+    background: #f3f4f6;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #4b5563;
+    margin: 4px;
+}
+
+.flare-detail-time {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-top: 8px;
+}
+
+.flare-detail-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.flare-detail-close {
+    width: 100%;
+    padding: 12px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.flare-detail-close:hover {
+    background: #e5e7eb;
+}
