@@ -2043,3 +2043,25 @@ input.input:disabled {
     color: #9ca3af;
     cursor: not-allowed;
 }
+
+/* Haptic Feedback Visual Fallback */
+.haptic-feedback {
+    animation: hapticPulse 0.15s ease-out;
+}
+
+@keyframes hapticPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+
+.haptic-success {
+    animation: hapticSuccess 0.3s ease-out;
+}
+
+@keyframes hapticSuccess {
+    0% { transform: scale(1); }
+    25% { transform: scale(0.95); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}

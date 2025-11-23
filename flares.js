@@ -95,30 +95,49 @@ const COMMON_EMOJIS = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.commo
 
 class Haptics {
     static vibrate(pattern = 10) {
-        // Check if vibration API is supported
+        // Try native vibration API (Android only - iOS doesn't support it)
         if ('vibrate' in navigator) {
-            navigator.vibrate(pattern);
+            try {
+                navigator.vibrate(pattern);
+            } catch (e) {
+                // Silently fail
+            }
         }
     }
 
-    static light() {
+    static light(element = null) {
         this.vibrate(10);
+        this.visualFeedback(element, 'light');
     }
 
-    static medium() {
+    static medium(element = null) {
         this.vibrate(25);
+        this.visualFeedback(element, 'medium');
     }
 
-    static heavy() {
+    static heavy(element = null) {
         this.vibrate([30, 10, 30]);
+        this.visualFeedback(element, 'heavy');
     }
 
-    static success() {
+    static success(element = null) {
         this.vibrate([10, 50, 20]);
+        this.visualFeedback(element, 'success');
     }
 
-    static error() {
+    static error(element = null) {
         this.vibrate([50, 30, 50, 30, 50]);
+        this.visualFeedback(element, 'error');
+    }
+
+    // Visual feedback fallback for devices without vibration
+    static visualFeedback(element, type) {
+        if (!element) return;
+
+        element.classList.add('haptic-feedback', `haptic-${type}`);
+        setTimeout(() => {
+            element.classList.remove('haptic-feedback', `haptic-${type}`);
+        }, 150);
     }
 }
 
@@ -176,7 +195,7 @@ class SwipeGestures {
     static triggerBack(currentScreen) {
         const backBtn = currentScreen.querySelector('.btn-secondary[id^="backTo"]');
         if (backBtn) {
-            Haptics.light();
+            Haptics.light(backBtn);
             backBtn.click();
         }
     }
@@ -185,7 +204,7 @@ class SwipeGestures {
         // Try to find continue/send button
         const forwardBtn = currentScreen.querySelector('.btn-primary[id^="continueTo"], .btn-primary[id^="send"]');
         if (forwardBtn && forwardBtn.style.display !== 'none') {
-            Haptics.light();
+            Haptics.light(forwardBtn);
             forwardBtn.click();
         }
     }
@@ -1432,7 +1451,7 @@ class UIRenderer {
                 <span class="emoji-label">${label}</span>
             `;
             btn.addEventListener('click', () => {
-                Haptics.light();
+                Haptics.light(btn);
                 btn.classList.toggle('selected');
                 appState.toggleEmoji(emoji, label);
             });
@@ -1461,7 +1480,7 @@ class UIRenderer {
                 <span class="trigger-label">${label}</span>
             `;
             btn.addEventListener('click', () => {
-                Haptics.light();
+                Haptics.light(btn);
                 btn.classList.toggle('selected');
                 appState.toggleTrigger(id, label, icon);
             });
@@ -1540,7 +1559,7 @@ class UIRenderer {
         // Show appropriate buttons based on contact types
         if (linkedBtn) linkedBtn.style.display = hasLinked ? 'inline-block' : 'none';
         emailBtn.style.display = hasSupports ? 'inline-block' : 'none';
-        smsBtn.style.display = 'none'; // Hide SMS when we have contacts
+        // SMS button is always visible (set in HTML)
 
         let html = '';
 
@@ -1778,7 +1797,7 @@ async function initApp() {
     // Mood Selection
     document.querySelectorAll('.flare-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            Haptics.medium();
+            Haptics.medium(e.currentTarget);
             const mood = e.currentTarget.dataset.mood;
             appState.setMood(mood);
             UIRenderer.renderEmojis(mood);
@@ -1872,34 +1891,6 @@ async function initApp() {
         NotificationManager.sendViaSMS(appState.sessionData);
         Haptics.success();
         ScreenManager.showModal('successModal');
-    });
-
-    // Share via link
-    document.getElementById('shareViaLink').addEventListener('click', () => {
-        try {
-            const link = NotificationManager.generateShareableLink(appState.sessionData);
-            document.getElementById('shareLink').value = link;
-            ScreenManager.showModal('shareLinkModal');
-        } catch (error) {
-            console.error('Error generating share link:', error);
-            // Still show modal with a fallback message
-            document.getElementById('shareLink').value = 'Error generating link';
-            ScreenManager.showModal('shareLinkModal');
-        }
-    });
-
-    document.getElementById('copyLinkBtn').addEventListener('click', () => {
-        const input = document.getElementById('shareLink');
-        input.select();
-        document.execCommand('copy');
-
-        const btn = document.getElementById('copyLinkBtn');
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 2000);
-    });
-
-    document.getElementById('closeShareLink').addEventListener('click', () => {
-        ScreenManager.hideModal('shareLinkModal');
     });
 
     // Done button - reset and go back to start
