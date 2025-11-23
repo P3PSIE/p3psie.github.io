@@ -39,35 +39,38 @@ const EMOJI_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.emojis :
     ]
 };
 
+// Trigger categories
+const TRIGGER_CATEGORIES = typeof FLARES_CONFIG !== 'undefined' && FLARES_CONFIG.triggerCategories ? FLARES_CONFIG.triggerCategories : {
+    sensory: { label: 'Sensory', icon: '👂' },
+    physical: { label: 'Physical', icon: '🏃' },
+    emotional: { label: 'Emotional', icon: '❤️' },
+    cognitive: { label: 'Cognitive', icon: '🧠' }
+};
+
+// Triggers organized by category
 const TRIGGERS_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.triggers : {
-    green: [
-        { id: 'good_news', label: 'Good news', icon: '📰' },
-        { id: 'social_time', label: 'Quality time with others', icon: '👥' },
-        { id: 'exercise', label: 'Exercise or movement', icon: '🏃' },
-        { id: 'achievement', label: 'Accomplished something', icon: '🎯' },
-        { id: 'rest', label: 'Good rest', icon: '😴' },
-        { id: 'nature', label: 'Time in nature', icon: '🌳' }
-    ],
-    orange: [
-        { id: 'work_stress', label: 'Work pressure', icon: '💼' },
-        { id: 'social_conflict', label: 'Social conflict', icon: '💬' },
-        { id: 'lack_sleep', label: 'Lack of sleep', icon: '😴' },
-        { id: 'financial', label: 'Financial concerns', icon: '💰' },
-        { id: 'health_concern', label: 'Health concerns', icon: '🏥' },
-        { id: 'change', label: 'Unexpected changes', icon: '🔄' },
-        { id: 'deadlines', label: 'Deadlines', icon: '⏰' },
-        { id: 'isolation', label: 'Feeling isolated', icon: '🚪' }
-    ],
-    red: [
+    sensory: [
         { id: 'loud_noises', label: 'Overwhelming sounds', icon: '🔊' },
-        { id: 'bright_lights', label: 'Too many bright lights', icon: '💡' },
+        { id: 'bright_lights', label: 'Bright lights', icon: '💡' },
         { id: 'crowds', label: 'Crowded spaces', icon: '👥' },
-        { id: 'confrontation', label: 'Confrontation', icon: '⚠️' },
-        { id: 'loss', label: 'Loss or grief', icon: '💔' },
-        { id: 'panic', label: 'Panic attack', icon: '😱' },
-        { id: 'sensory_overload', label: 'Sensory overload', icon: '🎆' },
-        { id: 'trauma_trigger', label: 'Trauma reminder', icon: '🚨' },
-        { id: 'physical_pain', label: 'Physical pain', icon: '🤕' },
+        { id: 'sensory_overload', label: 'Sensory overload', icon: '🎆' }
+    ],
+    physical: [
+        { id: 'exercise', label: 'Exercise or movement', icon: '🏃' },
+        { id: 'lack_sleep', label: 'Lack of sleep', icon: '😴' },
+        { id: 'rest', label: 'Good rest', icon: '🛏️' },
+        { id: 'physical_pain', label: 'Physical pain', icon: '🤕' }
+    ],
+    emotional: [
+        { id: 'social_time', label: 'Quality time with others', icon: '👥' },
+        { id: 'social_conflict', label: 'Social conflict', icon: '💬' },
+        { id: 'isolation', label: 'Feeling isolated', icon: '🚪' },
+        { id: 'loss', label: 'Loss or grief', icon: '💔' }
+    ],
+    cognitive: [
+        { id: 'work_stress', label: 'Work pressure', icon: '💼' },
+        { id: 'deadlines', label: 'Deadlines', icon: '⏰' },
+        { id: 'financial', label: 'Financial concerns', icon: '💰' },
         { id: 'intrusive_thoughts', label: 'Intrusive thoughts', icon: '🌀' }
     ]
 };
@@ -347,6 +350,11 @@ class AuthManager {
             // Sync data when user logs in
             if (user) {
                 CloudStorageManager.syncFromCloud();
+                // Update inbox badge
+                InboxManager.updateBadge();
+            } else {
+                // Hide badge when logged out
+                InboxManager.hideBadge();
             }
 
             // Resolve the init promise on first auth state
@@ -941,6 +949,7 @@ class LinkingManager {
                     body: sessionData.emojis.map(e => e.emoji).join(' ') || 'Check on them',
                     emojis: sessionData.emojis,
                     triggers: sessionData.triggers,
+                    message: sessionData.message || '',
                     timestamp: sessionData.timestamp,
                     createdAt: new Date().toISOString(),
                     read: false
@@ -1211,6 +1220,237 @@ class InboxManager {
         modal.querySelector('.flare-detail-overlay').addEventListener('click', closeModal);
         modal.querySelector('.flare-detail-close').addEventListener('click', closeModal);
     }
+
+    // Fetch all inbox items for display
+    static async fetchAllInboxItems() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return [];
+        }
+
+        const { collection, query, orderBy, getDocs } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const inboxQuery = query(inboxRef, orderBy('createdAt', 'desc'));
+
+        try {
+            const snapshot = await getDocs(inboxQuery);
+            const items = [];
+            snapshot.forEach((doc) => {
+                items.push({ id: doc.id, ...doc.data() });
+            });
+            return items;
+        } catch (error) {
+            console.error('Error fetching inbox items:', error);
+            return [];
+        }
+    }
+
+    // Count unread items and update badge
+    static async updateBadge() {
+        if (!AuthManager.currentUser) {
+            this.hideBadge();
+            return;
+        }
+
+        const { collection, query, where, getDocs } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const unreadQuery = query(inboxRef, where('read', '==', false));
+
+        try {
+            const snapshot = await getDocs(unreadQuery);
+            const count = snapshot.size;
+
+            const badge = document.getElementById('inboxBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Error updating badge:', error);
+        }
+    }
+
+    static hideBadge() {
+        const badge = document.getElementById('inboxBadge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+    }
+
+    // Render inbox screen
+    static async renderInboxScreen() {
+        const inboxList = document.getElementById('inboxList');
+        const emptyState = document.getElementById('inboxEmptyState');
+
+        if (!inboxList) return;
+
+        const items = await this.fetchAllInboxItems();
+
+        // Clear existing items (except empty state)
+        const existingItems = inboxList.querySelectorAll('.inbox-item');
+        existingItems.forEach(item => item.remove());
+
+        if (items.length === 0) {
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        const moodLabels = {
+            green: "I'm Okay",
+            orange: "I'm Struggling",
+            red: "I'm Overwhelmed"
+        };
+
+        items.forEach(flare => {
+            const itemEl = document.createElement('div');
+            itemEl.className = `inbox-item ${flare.read ? '' : 'unread'}`;
+            itemEl.dataset.id = flare.id;
+
+            const timestamp = new Date(flare.timestamp || flare.createdAt);
+            const timeAgo = this.getTimeAgo(timestamp);
+            const initial = (flare.senderName || 'U').charAt(0).toUpperCase();
+
+            const emojisHtml = flare.emojis && flare.emojis.length > 0
+                ? `<div class="inbox-emojis">${flare.emojis.map(e => e.emoji).join(' ')}</div>`
+                : '';
+
+            const triggersHtml = flare.triggers && flare.triggers.length > 0
+                ? `<div class="inbox-triggers">
+                    ${flare.triggers.map(t => `<span class="inbox-trigger-tag">${t.icon || ''} ${t.label}</span>`).join('')}
+                   </div>`
+                : '';
+
+            const messageHtml = flare.message
+                ? `<div class="inbox-message">"${flare.message}"</div>`
+                : '';
+
+            itemEl.innerHTML = `
+                <div class="inbox-item-header">
+                    <div class="inbox-sender">
+                        <div class="inbox-sender-avatar">${initial}</div>
+                        <div class="inbox-sender-info">
+                            <span class="inbox-sender-name">${flare.senderName || 'Someone'}</span>
+                            <span class="inbox-time">${timeAgo}</span>
+                        </div>
+                    </div>
+                    <span class="inbox-mood-badge ${flare.mood}">${moodLabels[flare.mood] || flare.mood}</span>
+                </div>
+                <div class="inbox-item-body">
+                    ${emojisHtml}
+                    ${triggersHtml}
+                    ${messageHtml}
+                </div>
+                <div class="inbox-item-actions">
+                    ${!flare.read ? '<button class="inbox-action-btn mark-read-btn">Mark Read</button>' : ''}
+                    <button class="inbox-action-btn delete-btn">Delete</button>
+                </div>
+            `;
+
+            // Event listeners
+            const markReadBtn = itemEl.querySelector('.mark-read-btn');
+            if (markReadBtn) {
+                markReadBtn.addEventListener('click', async () => {
+                    await this.markAsRead(flare.id);
+                    itemEl.classList.remove('unread');
+                    markReadBtn.remove();
+                    this.updateBadge();
+                });
+            }
+
+            const deleteBtn = itemEl.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    await this.deleteInboxItem(flare.id);
+                    itemEl.remove();
+                    this.updateBadge();
+
+                    // Check if list is now empty
+                    const remainingItems = inboxList.querySelectorAll('.inbox-item');
+                    if (remainingItems.length === 0 && emptyState) {
+                        emptyState.style.display = 'block';
+                    }
+                });
+            }
+
+            inboxList.appendChild(itemEl);
+        });
+    }
+
+    // Delete an inbox item
+    static async deleteInboxItem(flareId) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { doc, deleteDoc } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+
+        try {
+            await deleteDoc(doc(window.firebaseDb, 'users', userId, 'inbox', flareId));
+            console.log('Deleted inbox item:', flareId);
+        } catch (error) {
+            console.error('Error deleting inbox item:', error);
+        }
+    }
+
+    // Mark all inbox items as read
+    static async markAllAsRead() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { collection, query, where, getDocs, doc, updateDoc } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const unreadQuery = query(inboxRef, where('read', '==', false));
+
+        try {
+            const snapshot = await getDocs(unreadQuery);
+            const updatePromises = [];
+
+            snapshot.forEach((docSnapshot) => {
+                updatePromises.push(
+                    updateDoc(doc(window.firebaseDb, 'users', userId, 'inbox', docSnapshot.id), {
+                        read: true
+                    })
+                );
+            });
+
+            await Promise.all(updatePromises);
+            console.log(`Marked ${updatePromises.length} items as read`);
+
+            // Update UI
+            const inboxItems = document.querySelectorAll('.inbox-item.unread');
+            inboxItems.forEach(item => {
+                item.classList.remove('unread');
+                const markReadBtn = item.querySelector('.mark-read-btn');
+                if (markReadBtn) markReadBtn.remove();
+            });
+
+            this.updateBadge();
+        } catch (error) {
+            console.error('Error marking all as read:', error);
+        }
+    }
+
+    // Helper: Get time ago string
+    static getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+
+        return date.toLocaleDateString();
+    }
 }
 
 // ============================================================================
@@ -1224,6 +1464,7 @@ class AppState {
             mood: null,
             emojis: [],
             triggers: [],
+            message: '',
             timestamp: null
         };
     }
@@ -1231,6 +1472,10 @@ class AppState {
     setMood(mood) {
         this.sessionData.mood = mood;
         this.sessionData.timestamp = new Date().toISOString();
+    }
+
+    setMessage(message) {
+        this.sessionData.message = message.trim().substring(0, 200);
     }
 
     toggleEmoji(emoji, label) {
@@ -1256,8 +1501,14 @@ class AppState {
             mood: null,
             emojis: [],
             triggers: [],
+            message: '',
             timestamp: null
         };
+        // Clear message input
+        const messageInput = document.getElementById('flareMessage');
+        if (messageInput) messageInput.value = '';
+        const charCount = document.getElementById('messageCharCount');
+        if (charCount) charCount.textContent = '0';
     }
 
     // Save session and sync with Firebase if authenticated
@@ -1460,32 +1711,124 @@ class UIRenderer {
     }
 
     static renderTriggers(mood) {
-        const grid = document.getElementById('triggersGrid');
-        grid.innerHTML = '';
+        const container = document.getElementById('triggersGrid');
+        container.innerHTML = '';
 
-        // Set mood class on grid for styling
-        grid.className = `triggers-grid mood-${mood}`;
+        // Set mood class on container for styling
+        container.className = `triggers-container mood-${mood}`;
 
-        // Combine default triggers with custom triggers
-        const defaultTriggers = TRIGGERS_DATA[mood];
+        // Get custom triggers
         const customTriggers = CustomTriggerManager.getCustomTriggers();
-        const allTriggers = [...defaultTriggers, ...customTriggers];
 
-        allTriggers.forEach(({ id, label, icon }) => {
-            const btn = document.createElement('button');
-            btn.className = 'trigger-btn';
-            btn.dataset.triggerId = id;
-            btn.innerHTML = `
-                <span class="trigger-icon">${icon}</span>
-                <span class="trigger-label">${label}</span>
+        // Track selection counts per category
+        const selectionCounts = {};
+
+        // Render each category
+        Object.keys(TRIGGER_CATEGORIES).forEach(categoryId => {
+            const category = TRIGGER_CATEGORIES[categoryId];
+            const triggers = TRIGGERS_DATA[categoryId] || [];
+
+            // Create category section
+            const section = document.createElement('div');
+            section.className = 'trigger-category';
+            section.dataset.category = categoryId;
+
+            // Create collapsible header
+            const header = document.createElement('button');
+            header.className = 'trigger-category-header';
+            header.innerHTML = `
+                <span class="category-icon">${category.icon}</span>
+                <span class="category-label">${category.label}</span>
+                <span class="category-count" data-category="${categoryId}">0</span>
+                <span class="category-chevron">▼</span>
             `;
-            btn.addEventListener('click', () => {
-                Haptics.light(btn);
-                btn.classList.toggle('selected');
-                appState.toggleTrigger(id, label, icon);
+
+            // Create triggers grid
+            const grid = document.createElement('div');
+            grid.className = 'trigger-category-grid';
+
+            // Add triggers to grid
+            triggers.forEach(({ id, label, icon }) => {
+                const btn = document.createElement('button');
+                btn.className = 'trigger-btn';
+                btn.dataset.triggerId = id;
+                btn.dataset.category = categoryId;
+                btn.innerHTML = `
+                    <span class="trigger-icon">${icon}</span>
+                    <span class="trigger-label">${label}</span>
+                `;
+                btn.addEventListener('click', () => {
+                    Haptics.light(btn);
+                    btn.classList.toggle('selected');
+                    appState.toggleTrigger(id, label, icon);
+                    this.updateCategoryCount(categoryId);
+                });
+                grid.appendChild(btn);
             });
-            grid.appendChild(btn);
+
+            // Toggle collapse on header click
+            header.addEventListener('click', () => {
+                section.classList.toggle('collapsed');
+            });
+
+            section.appendChild(header);
+            section.appendChild(grid);
+            container.appendChild(section);
         });
+
+        // Add custom triggers section if any exist
+        if (customTriggers.length > 0) {
+            const section = document.createElement('div');
+            section.className = 'trigger-category';
+            section.dataset.category = 'custom';
+
+            const header = document.createElement('button');
+            header.className = 'trigger-category-header';
+            header.innerHTML = `
+                <span class="category-icon">⭐</span>
+                <span class="category-label">Custom</span>
+                <span class="category-count" data-category="custom">0</span>
+                <span class="category-chevron">▼</span>
+            `;
+
+            const grid = document.createElement('div');
+            grid.className = 'trigger-category-grid';
+
+            customTriggers.forEach(({ id, label, icon }) => {
+                const btn = document.createElement('button');
+                btn.className = 'trigger-btn';
+                btn.dataset.triggerId = id;
+                btn.dataset.category = 'custom';
+                btn.innerHTML = `
+                    <span class="trigger-icon">${icon}</span>
+                    <span class="trigger-label">${label}</span>
+                `;
+                btn.addEventListener('click', () => {
+                    Haptics.light(btn);
+                    btn.classList.toggle('selected');
+                    appState.toggleTrigger(id, label, icon);
+                    this.updateCategoryCount('custom');
+                });
+                grid.appendChild(btn);
+            });
+
+            header.addEventListener('click', () => {
+                section.classList.toggle('collapsed');
+            });
+
+            section.appendChild(header);
+            section.appendChild(grid);
+            container.appendChild(section);
+        }
+    }
+
+    static updateCategoryCount(categoryId) {
+        const countEl = document.querySelector(`.category-count[data-category="${categoryId}"]`);
+        if (countEl) {
+            const selected = document.querySelectorAll(`.trigger-btn[data-category="${categoryId}"].selected`).length;
+            countEl.textContent = selected;
+            countEl.style.display = selected > 0 ? 'flex' : 'none';
+        }
     }
 
     static renderPreview(sessionData) {
@@ -1829,6 +2172,17 @@ async function initApp() {
         ScreenManager.showScreen('previewScreen');
     });
 
+    // Message input handling
+    const flareMessageInput = document.getElementById('flareMessage');
+    const messageCharCount = document.getElementById('messageCharCount');
+    if (flareMessageInput) {
+        flareMessageInput.addEventListener('input', () => {
+            const length = flareMessageInput.value.length;
+            if (messageCharCount) messageCharCount.textContent = length;
+            appState.setMessage(flareMessageInput.value);
+        });
+    }
+
     document.getElementById('backToTriggers').addEventListener('click', () => {
         ScreenManager.showScreen('triggersScreen');
     });
@@ -1905,6 +2259,24 @@ async function initApp() {
         UIRenderer.renderContactsList();
         UIRenderer.renderHistory();
         ScreenManager.showModal('settingsModal');
+    });
+
+    // Inbox
+    document.getElementById('inboxBtn').addEventListener('click', async () => {
+        if (!AuthManager.currentUser) {
+            alert('Please sign in to view received flares');
+            return;
+        }
+        await InboxManager.renderInboxScreen();
+        ScreenManager.showScreen('inboxScreen');
+    });
+
+    document.getElementById('backFromInbox').addEventListener('click', () => {
+        ScreenManager.showScreen('moodScreen');
+    });
+
+    document.getElementById('markAllReadBtn').addEventListener('click', async () => {
+        await InboxManager.markAllAsRead();
     });
 
     document.getElementById('manageSupportBtn').addEventListener('click', () => {
@@ -2707,12 +3079,14 @@ function updateUIForAuthState(user) {
     const userAvatarImg = document.getElementById('userAvatarImg');
     const userName = document.getElementById('userName');
     const userEmail = document.getElementById('userEmail');
+    const inboxBtn = document.getElementById('inboxBtn');
 
     if (user) {
-        // Logged in - show profile and linked contacts
+        // Logged in - show profile, inbox, and linked contacts
         if (userProfileSection) userProfileSection.style.display = 'block';
         if (guestModeNotice) guestModeNotice.style.display = 'none';
         if (linkedContactsSection) linkedContactsSection.style.display = 'block';
+        if (inboxBtn) inboxBtn.style.display = 'flex';
 
         // Load profile from cloud and update UI
         ProfileManager.loadFromCloud().then(() => {
@@ -2747,10 +3121,11 @@ function updateUIForAuthState(user) {
         InboxManager.startListening();
         InboxManager.checkPendingFlares();
     } else if (AuthManager.isGuest) {
-        // Guest mode - show notice, hide linked contacts
+        // Guest mode - show notice, hide linked contacts and inbox
         if (userProfileSection) userProfileSection.style.display = 'none';
         if (guestModeNotice) guestModeNotice.style.display = 'block';
         if (linkedContactsSection) linkedContactsSection.style.display = 'none';
+        if (inboxBtn) inboxBtn.style.display = 'none';
 
         // Stop inbox listener for guest mode
         InboxManager.stopListening();
@@ -2759,6 +3134,7 @@ function updateUIForAuthState(user) {
         if (userProfileSection) userProfileSection.style.display = 'none';
         if (linkedContactsSection) linkedContactsSection.style.display = 'none';
         if (guestModeNotice) guestModeNotice.style.display = 'none';
+        if (inboxBtn) inboxBtn.style.display = 'none';
 
         // Stop inbox listener when logged out
         InboxManager.stopListening();
