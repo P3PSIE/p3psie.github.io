@@ -25,7 +25,7 @@ const FLARES_CONFIG = {
             color: '#22c55e',
             colorLight: '#dcfce7',
             colorDark: '#16a34a',
-            icon: 'assets/icons/mood-green.svg' // Replace with your own
+            icon: 'assets/icons/mood-green.png'
         },
         orange: {
             label: 'Struggling',
@@ -33,7 +33,7 @@ const FLARES_CONFIG = {
             color: '#f97316',
             colorLight: '#ffedd5',
             colorDark: '#ea580c',
-            icon: 'assets/icons/mood-orange.svg'
+            icon: 'assets/icons/mood-orange.png'
         },
         red: {
             label: 'Overwhelmed',
@@ -41,7 +41,7 @@ const FLARES_CONFIG = {
             color: '#ef4444',
             colorLight: '#fee2e2',
             colorDark: '#dc2626',
-            icon: 'assets/icons/mood-red.svg'
+            icon: 'assets/icons/mood-red.png'
         }
     },
 
@@ -156,7 +156,7 @@ const FLARES_CONFIG = {
     // Assets Paths
     // ========================================================================
     assets: {
-        logo: 'assets/icons/logo.svg',
+        logo: 'assets/icons/logo.png',
         appIcon: 'assets/icons/app-icon.png',
         // Add more asset paths as needed
     }

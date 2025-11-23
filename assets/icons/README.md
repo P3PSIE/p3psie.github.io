@@ -6,15 +6,14 @@ Replace these placeholder icons with your own designs.
 
 | File | Description | Recommended Size |
 |------|-------------|------------------|
-| `logo.svg` | App logo/wordmark | Any (SVG) |
-| `mood-green.svg` | Green/Stable mood icon | 100x100 |
-| `mood-orange.svg` | Orange/Struggling mood icon | 100x100 |
-| `mood-red.svg` | Red/Overwhelmed mood icon | 100x100 |
-| `app-icon.png` | PWA app icon | 512x512 |
+| `logo.png` | App logo/wordmark | 512x512 |
+| `mood-green.png` | Green/Stable mood icon | 100x100 |
+| `mood-orange.png` | Orange/Struggling mood icon | 100x100 |
+| `mood-red.png` | Red/Overwhelmed mood icon | 100x100 |
 
 ## Tips
 
-- SVG format is preferred for scalability
+- PNG format is used for broad compatibility
 - Keep icons simple and recognizable
 - Test icons at small sizes (24x24) for visibility
 - Use the colors defined in `theme.css` for consistency
