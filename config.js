@@ -20,27 +20,27 @@ const FLARES_CONFIG = {
     // ========================================================================
     moods: {
         green: {
-            label: 'Stable',
-            description: "I'm doing okay",
-            color: '#22c55e',
-            colorLight: '#dcfce7',
-            colorDark: '#16a34a',
+            label: "I'm Okay",
+            description: "Feeling calm, regulated, and able to engage",
+            color: '#2ECC71',
+            colorLight: '#58D68D',
+            colorDark: '#27AE60',
             icon: 'assets/icons/mood-green.png'
         },
         orange: {
-            label: 'Struggling',
-            description: "I'm having a hard time",
-            color: '#f97316',
-            colorLight: '#ffedd5',
-            colorDark: '#ea580c',
+            label: "I'm Struggling",
+            description: "Feeling stressed or finding things difficult",
+            color: '#F39C12',
+            colorLight: '#F5B041',
+            colorDark: '#E67E22',
             icon: 'assets/icons/mood-orange.png'
         },
         red: {
-            label: 'Overwhelmed',
-            description: "I need support",
-            color: '#ef4444',
-            colorLight: '#fee2e2',
-            colorDark: '#dc2626',
+            label: "I'm Overwhelmed",
+            description: "Feeling unable to cope or need support",
+            color: '#E74C3C',
+            colorLight: '#EC7063',
+            colorDark: '#C0392B',
             icon: 'assets/icons/mood-red.png'
         }
     },

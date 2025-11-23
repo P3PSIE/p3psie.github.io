@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Link codes - anyone authenticated can read (to validate codes)
+    // Only the creator can write their own code
+    match /linkCodes/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null;
+    }
+
+    // User documents
+    match /users/{userId} {
+      // Users can read/write their own document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Linked contacts subcollection
+      match /linkedContacts/{contactId} {
+        // User can manage their own linked contacts
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // Other users can add themselves as a linked contact (for bidirectional linking)
+        allow create: if request.auth != null
+                      && request.auth.uid == contactId
+                      && request.resource.data.userId == request.auth.uid;
+        // Other users can remove themselves
+        allow delete: if request.auth != null && request.auth.uid == contactId;
+      }
+
+      // Inbox subcollection - for receiving flares
+      match /inbox/{messageId} {
+        // User can read/delete their own inbox
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        // Any authenticated user can send a message (create)
+        allow create: if request.auth != null;
+      }
+
+      // History subcollection
+      match /history/{entryId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Profile subcollection
+      match /profile/{docId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

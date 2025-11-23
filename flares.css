@@ -5,16 +5,17 @@
 /* Base App Container */
 .flares-app {
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100dvh;
+    background: var(--background);
     position: relative;
     overflow-x: hidden;
 }
 
 /* Navigation */
 .flares-nav {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-secondary);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid var(--divider);
     padding: 1rem;
     position: sticky;
     top: 0;
@@ -30,7 +31,7 @@
 }
 
 .back-btn {
-    color: white;
+    color: var(--text-primary);
     text-decoration: none;
     font-size: 1rem;
     transition: opacity 0.3s;
@@ -43,17 +44,16 @@
 .flares-nav .logo {
     font-size: 1.5rem;
     font-weight: bold;
-    color: white;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    color: var(--text-primary);
 }
 
 .settings-btn {
     position: fixed;
     top: 1rem;
     right: 1rem;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
+    color: var(--text-primary);
     font-size: 1.5rem;
     width: 44px;
     height: 44px;
@@ -61,11 +61,10 @@
     cursor: pointer;
     transition: all 0.3s;
     z-index: 200;
-    backdrop-filter: blur(10px);
 }
 
 .settings-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--bg-tertiary);
     transform: rotate(90deg);
 }
 
@@ -88,17 +87,16 @@
 }
 
 .screen-title {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: white;
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
     text-align: center;
     margin-bottom: 0.5rem;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .screen-subtitle {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
     text-align: center;
     margin-bottom: 3rem;
 }
@@ -113,7 +111,7 @@
     align-items: center;
     padding: 1rem 1.5rem;
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
-    background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
+    background: linear-gradient(to top, var(--background) 0%, transparent 100%);
     z-index: 150;
 }
 
@@ -142,200 +140,210 @@
 }
 
 .flare-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
-    padding: 2rem;
+    background: var(--card-background);
+    border: 2px solid var(--divider);
+    border-radius: var(--radius-lg);
+    padding: 0.75rem 1.5rem;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1rem;
     position: relative;
     overflow: hidden;
 }
 
 .flare-btn:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transform: translateY(-3px);
 }
 
-.flare-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
-    opacity: 0;
-    transition: opacity 0.3s;
+.flare-btn:active {
+    transform: scale(0.98);
 }
 
-.flare-btn:hover::before {
-    opacity: 1;
-}
-
-.flare-light {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    box-shadow: 0 0 30px currentColor;
-    animation: pulse 2s ease-in-out infinite;
+/* Flare Icon (PNG images) */
+.flare-icon {
+    width: 100px;
+    height: 100px;
     flex-shrink: 0;
+    object-fit: contain;
+    transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-.flare-btn.green .flare-light {
-    background: #10b981;
-    color: #10b981;
+/* Glow effects for each mood color */
+.flare-btn.green .flare-icon {
+    filter: drop-shadow(0 0 20px var(--mood-green)) drop-shadow(0 0 40px var(--mood-green-glow));
 }
 
-.flare-btn.orange .flare-light {
-    background: #f59e0b;
-    color: #f59e0b;
+.flare-btn.green:hover .flare-icon {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 25px var(--mood-green)) drop-shadow(0 0 50px var(--mood-green-glow)) drop-shadow(0 0 70px var(--mood-green-glow));
 }
 
-.flare-btn.red .flare-light {
-    background: #ef4444;
-    color: #ef4444;
+.flare-btn.orange .flare-icon {
+    filter: drop-shadow(0 0 20px var(--mood-orange)) drop-shadow(0 0 40px var(--mood-orange-glow));
+}
+
+.flare-btn.orange:hover .flare-icon {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 25px var(--mood-orange)) drop-shadow(0 0 50px var(--mood-orange-glow)) drop-shadow(0 0 70px var(--mood-orange-glow));
+}
+
+.flare-btn.red .flare-icon {
+    filter: drop-shadow(0 0 20px var(--mood-red)) drop-shadow(0 0 40px var(--mood-red-glow));
+}
+
+.flare-btn.red:hover .flare-icon {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 25px var(--mood-red)) drop-shadow(0 0 50px var(--mood-red-glow)) drop-shadow(0 0 70px var(--mood-red-glow));
+}
+
+/* Flare text container */
+.flare-text {
+    flex: 1;
+    text-align: left;
 }
 
 .flare-label {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: white;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
     display: block;
 }
 
 .flare-desc {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
     display: block;
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
 }
 
 /* Emoji Grid */
 .emoji-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.75rem;
     margin: 2rem 0;
 }
 
 .emoji-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 15px;
-    padding: 1.5rem 1rem;
+    background: var(--card-background);
+    border: 2px solid var(--divider);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 0.75rem;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.15s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+    min-height: var(--touch-minimum);
 }
 
 .emoji-btn:hover {
-    transform: scale(1.05);
-    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.02);
+    background: var(--bg-tertiary);
+}
+
+.emoji-btn:active {
+    transform: scale(0.98);
 }
 
 .emoji-btn.selected {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: white;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
 }
 
 /* Mood-specific selection colors for emojis */
 .mood-green .emoji-btn.selected {
-    background: rgba(34, 197, 94, 0.4);
-    border-color: #22c55e;
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+    background: rgba(46, 204, 113, 0.2);
+    border-color: var(--mood-green);
+    box-shadow: 0 0 15px var(--mood-green-glow);
 }
 
 .mood-orange .emoji-btn.selected {
-    background: rgba(249, 115, 22, 0.4);
-    border-color: #f97316;
-    box-shadow: 0 0 20px rgba(249, 115, 22, 0.6);
+    background: rgba(243, 156, 18, 0.2);
+    border-color: var(--mood-orange);
+    box-shadow: 0 0 15px var(--mood-orange-glow);
 }
 
 .mood-red .emoji-btn.selected {
-    background: rgba(239, 68, 68, 0.4);
-    border-color: #ef4444;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+    background: rgba(231, 76, 60, 0.2);
+    border-color: var(--mood-red);
+    box-shadow: 0 0 15px var(--mood-red-glow);
 }
 
 .emoji-icon {
-    font-size: 3rem;
+    font-size: 2.5rem;
 }
 
 .emoji-label {
-    font-size: 0.9rem;
-    color: white;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
     text-align: center;
 }
 
 /* Triggers Grid */
 .triggers-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
     margin: 2rem 0;
 }
 
 .trigger-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 15px;
-    padding: 1rem 1.5rem;
+    background: var(--card-background);
+    border: 2px solid var(--divider);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     gap: 1rem;
     text-align: left;
+    min-height: var(--touch-minimum);
 }
 
 .trigger-btn:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--bg-tertiary);
+}
+
+.trigger-btn:active {
+    transform: scale(0.98);
 }
 
 .trigger-btn.selected {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: white;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
 }
 
 /* Mood-specific selection colors for triggers */
 .mood-green .trigger-btn.selected {
-    background: rgba(34, 197, 94, 0.4);
-    border-color: #22c55e;
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+    background: rgba(46, 204, 113, 0.2);
+    border-color: var(--mood-green);
+    box-shadow: 0 0 15px var(--mood-green-glow);
 }
 
 .mood-orange .trigger-btn.selected {
-    background: rgba(249, 115, 22, 0.4);
-    border-color: #f97316;
-    box-shadow: 0 0 20px rgba(249, 115, 22, 0.6);
+    background: rgba(243, 156, 18, 0.2);
+    border-color: var(--mood-orange);
+    box-shadow: 0 0 15px var(--mood-orange-glow);
 }
 
 .mood-red .trigger-btn.selected {
-    background: rgba(239, 68, 68, 0.4);
-    border-color: #ef4444;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+    background: rgba(231, 76, 60, 0.2);
+    border-color: var(--mood-red);
+    box-shadow: 0 0 15px var(--mood-red-glow);
 }
 
 .trigger-icon {
-    font-size: 2rem;
+    font-size: 1.75rem;
 }
 
 .trigger-label {
-    font-size: 1rem;
-    color: white;
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
 }
 
 /* Notification Preview */
@@ -499,58 +507,61 @@
 
 /* Buttons */
 .btn {
-    padding: 1rem 2rem;
-    border-radius: 10px;
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--radius-md);
     border: none;
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.15s ease;
     text-decoration: none;
     display: inline-block;
+    min-height: var(--touch-minimum);
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    background: var(--mood-green);
+    color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    background: var(--mood-green-dark);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
 }
 
 .btn-secondary {
-    background: #f3f4f6;
-    color: #4b5563;
-    border: 1px solid #e5e7eb;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--divider);
 }
 
 .btn-secondary:hover {
-    background: #e5e7eb;
+    background: var(--divider);
 }
 
 .btn-tertiary {
     background: transparent;
-    color: white;
-    border: 2px solid white;
+    color: var(--text-primary);
+    border: 1px solid var(--divider);
 }
 
 .btn-tertiary:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-tertiary);
 }
 
 .btn-link {
     background: transparent;
-    color: white;
+    color: var(--text-secondary);
     border: none;
     text-decoration: underline;
     padding: 0.5rem 1rem;
 }
 
 .btn-link:hover {
-    opacity: 0.8;
+    color: var(--text-primary);
 }
 
 /* Modal */
@@ -561,7 +572,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--bg-overlay);
     backdrop-filter: blur(5px);
     z-index: 1000;
     padding: 1rem;
@@ -576,13 +587,14 @@
 }
 
 .modal-content {
-    background: white;
-    border-radius: 20px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--divider);
     max-width: 600px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-2xl);
     animation: slideUp 0.3s;
 }
 
@@ -596,20 +608,20 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--divider);
 }
 
 .modal-header h2 {
     margin: 0;
-    font-size: 1.5rem;
-    color: #1f2937;
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
 }
 
 .modal-close {
     background: none;
     border: none;
     font-size: 2rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     cursor: pointer;
     width: 40px;
     height: 40px;
@@ -621,8 +633,8 @@
 }
 
 .modal-close:hover {
-    background: #f3f4f6;
-    color: #1f2937;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
 .modal-body {
@@ -630,18 +642,18 @@
 }
 
 .modal-body h3 {
-    color: #1f2937;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
 .help-text {
-    color: #6b7280;
-    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
     margin-bottom: 1rem;
 }
 
 .help-text.small {
-    font-size: 0.8rem;
+    font-size: var(--font-size-xs);
 }
 
 /* Success Modal */
@@ -683,19 +695,19 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background: #f9fafb;
-    border-radius: 10px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
     margin-bottom: 0.5rem;
 }
 
 .contact-name {
-    font-weight: 600;
-    color: #1f2937;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
 }
 
 .contact-email {
-    font-size: 0.9rem;
-    color: #6b7280;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
 }
 
 .btn-icon-delete {
@@ -725,16 +737,23 @@
 
 .input {
     padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 10px;
-    font-size: 1rem;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
     transition: all 0.3s;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    min-height: var(--touch-minimum);
 }
 
 .input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--mood-green);
+    box-shadow: 0 0 0 3px var(--mood-green-glow);
+}
+
+.input::placeholder {
+    color: var(--text-secondary);
 }
 
 .input.share-link {
@@ -761,8 +780,8 @@
 
 .history-item {
     padding: 1rem;
-    background: #f9fafb;
-    border-radius: 10px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
     margin-bottom: 0.5rem;
     display: flex;
     justify-content: space-between;
@@ -779,13 +798,13 @@
 }
 
 .history-mood {
-    font-weight: 600;
-    color: #1f2937;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
 }
 
 .history-time {
-    font-size: 0.85rem;
-    color: #6b7280;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
 }
 
 .history-emojis {
@@ -1255,42 +1274,34 @@ hr {
     margin-bottom: 3rem;
 }
 
-.auth-flare {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
-    margin: 0 auto 1.5rem;
-    box-shadow: 0 0 40px rgba(245, 158, 11, 0.5);
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.auth-title {
-    font-size: 3rem;
-    font-weight: bold;
-    color: white;
-    margin: 0;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+.auth-flare-img {
+    width: 200px;
+    height: auto;
+    margin: 0 auto 1rem;
+    display: block;
+    filter: drop-shadow(0 0 20px var(--mood-orange-glow));
 }
 
 .auth-tagline {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
     margin-top: 0.5rem;
+    text-align: center;
 }
 
 .auth-form {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
+    background: var(--card-background);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-lg);
     padding: 2rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-xl);
 }
 
 .auth-form h2 {
-    color: #1f2937;
+    color: var(--text-primary);
     margin: 0 0 1.5rem 0;
     text-align: center;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
 }
 
 .auth-fields {
@@ -1321,24 +1332,24 @@ hr {
 
 .auth-switch {
     text-align: center;
-    color: #6b7280;
+    color: var(--text-secondary);
     margin-top: 1.5rem;
-    font-size: 0.95rem;
+    font-size: var(--font-size-sm);
 }
 
 .btn-link-inline {
     background: none;
     border: none;
-    color: #667eea;
+    color: var(--mood-green);
     cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
     padding: 0;
     text-decoration: underline;
 }
 
 .btn-link-inline:hover {
-    color: #764ba2;
+    color: var(--mood-green-light);
 }
 
 .auth-skip {
