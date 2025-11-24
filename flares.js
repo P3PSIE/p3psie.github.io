@@ -1426,14 +1426,10 @@ class InboxManager {
             await Promise.all(updatePromises);
             console.log(`Marked ${updatePromises.length} items as read`);
 
-            // Update UI
-            const inboxItems = document.querySelectorAll('.inbox-item.unread');
-            inboxItems.forEach(item => {
-                item.classList.remove('unread');
-                const markReadBtn = item.querySelector('.mark-read-btn');
-                if (markReadBtn) markReadBtn.remove();
-            });
+            // Re-render the inbox screen to reflect changes
+            await this.renderInboxScreen();
 
+            // Update badge
             this.updateBadge();
         } catch (error) {
             console.error('Error marking all as read:', error);
