@@ -1004,6 +1004,10 @@ class InboxManager {
                     if (!flare.read && isRecent) {
                         this.showFlareNotification(flare);
                     }
+                } else if (change.type === 'modified') {
+                    // Item was modified (e.g., marked as read)
+                    // Update badge count
+                    this.updateBadge();
                 }
             });
         }, (error) => {
@@ -1358,8 +1362,8 @@ class InboxManager {
             if (markReadBtn) {
                 markReadBtn.addEventListener('click', async () => {
                     await this.markAsRead(flare.id);
-                    itemEl.classList.remove('unread');
-                    markReadBtn.remove();
+                    // Re-render to show updated state
+                    await this.renderInboxScreen();
                     this.updateBadge();
                 });
             }
