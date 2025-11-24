@@ -1387,7 +1387,8 @@ hr {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     margin-bottom: 1rem;
 }
@@ -1396,7 +1397,7 @@ hr {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--mood-green);
     color: white;
     display: flex;
     align-items: center;
@@ -1413,13 +1414,13 @@ hr {
 
 .user-name {
     font-weight: 600;
-    color: white;
+    color: var(--text-primary);
     font-size: 1.1rem;
 }
 
 .user-email {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

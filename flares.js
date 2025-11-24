@@ -1272,13 +1272,19 @@ class InboxManager {
             const count = snapshot.size;
 
             const badge = document.getElementById('inboxBadge');
-            if (badge) {
-                if (count > 0) {
+            const inboxBtn = document.getElementById('inboxBtn');
+
+            if (count > 0) {
+                // Show inbox button and badge when there are unread items
+                if (inboxBtn) inboxBtn.style.display = 'block';
+                if (badge) {
                     badge.textContent = count > 99 ? '99+' : count;
                     badge.style.display = 'flex';
-                } else {
-                    badge.style.display = 'none';
                 }
+            } else {
+                // Hide inbox button and badge when no unread items
+                if (inboxBtn) inboxBtn.style.display = 'none';
+                if (badge) badge.style.display = 'none';
             }
         } catch (error) {
             console.error('Error updating badge:', error);
@@ -1287,9 +1293,9 @@ class InboxManager {
 
     static hideBadge() {
         const badge = document.getElementById('inboxBadge');
-        if (badge) {
-            badge.style.display = 'none';
-        }
+        const inboxBtn = document.getElementById('inboxBtn');
+        if (badge) badge.style.display = 'none';
+        if (inboxBtn) inboxBtn.style.display = 'none';
     }
 
     // Render inbox screen
@@ -1772,9 +1778,9 @@ class UIRenderer {
             const category = TRIGGER_CATEGORIES[categoryId];
             const triggers = TRIGGERS_DATA[categoryId] || [];
 
-            // Create category section
+            // Create category section (collapsed by default)
             const section = document.createElement('div');
-            section.className = 'trigger-category';
+            section.className = 'trigger-category collapsed';
             section.dataset.category = categoryId;
 
             // Create collapsible header
@@ -1823,7 +1829,7 @@ class UIRenderer {
         // Add custom triggers section if any exist
         if (customTriggers.length > 0) {
             const section = document.createElement('div');
-            section.className = 'trigger-category';
+            section.className = 'trigger-category collapsed';
             section.dataset.category = 'custom';
 
             const header = document.createElement('button');
