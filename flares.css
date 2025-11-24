@@ -13,8 +13,7 @@
 
 /* Navigation */
 .flares-nav {
-    background: var(--bg-secondary);
-    backdrop-filter: blur(10px);
+    background: var(--background);
     border-bottom: 1px solid var(--divider);
     padding: 1rem;
     position: sticky;
@@ -45,7 +44,6 @@
     height: 50px;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.3));
 }
 
 .nav-actions {
@@ -1042,15 +1040,15 @@ hr {
 }
 
 .customization-buttons .btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
     font-weight: 600;
 }
 
 .customization-buttons .btn:hover {
+    background: var(--bg-tertiary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 /* Custom Items List */
@@ -1059,7 +1057,8 @@ hr {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: #f9fafb;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     margin-bottom: 0.75rem;
 }
@@ -1600,7 +1599,8 @@ hr {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: #f9fafb;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     margin-bottom: 0.5rem;
 }
@@ -1609,7 +1609,7 @@ hr {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--mood-green);
     color: white;
     display: flex;
     align-items: center;
@@ -1624,17 +1624,18 @@ hr {
 
 .linked-contact-name {
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-primary);
 }
 
 .linked-contact-email {
     font-size: 0.85rem;
-    color: #6b7280;
+    color: var(--text-secondary);
 }
 
 /* Link Code Display */
 .link-code-display {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--surface-secondary);
+    border: 2px solid var(--mood-green);
     border-radius: 15px;
     padding: 2rem;
     text-align: center;
@@ -1644,14 +1645,14 @@ hr {
 .link-code {
     font-size: 3rem;
     font-weight: bold;
-    color: white;
+    color: var(--mood-green);
     letter-spacing: 0.5rem;
     font-family: monospace;
 }
 
 .link-code-expiry {
     text-align: center;
-    color: #6b7280;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     margin-bottom: 1rem;
 }
