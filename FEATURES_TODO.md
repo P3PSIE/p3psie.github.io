@@ -8,12 +8,12 @@ This document tracks features present in the iOS app that are missing or incompl
 
 | Status | Feature | Description |
 |--------|---------|-------------|
-| [ ] | **Received Flares/Inbox Screen** | iOS has a dedicated "Received Insights" screen to view flares from linked contacts. Web has no UI to view received flares. |
-| [ ] | **Optional Custom Message** | iOS allows adding a personal message (up to 200 chars) when sending a flare. |
-| [ ] | **Categorized Triggers** | iOS organizes triggers into collapsible sections (Sensory, Emotional, Cognitive, Physical) with selection count badges. |
-| [ ] | **Sent vs Received History Tabs** | iOS has tabs to filter history by sent/received. Web shows a flat list. |
-| [ ] | **Edit Flare Feature** | iOS allows editing previously sent flares (change emojis, reasons, messages) and resending. |
-| [ ] | **Resend Flare Button** | iOS provides quick "Resend" action on history cards. |
+| [x] | **Received Flares/Inbox Screen** | ✅ Complete! Inbox with navigation, badge, sender info, mark read/delete actions. |
+| [x] | **Optional Custom Message** | ✅ Complete! Textarea on preview screen with 200 char limit and counter. |
+| [x] | **Categorized Triggers** | ✅ Complete! Organized into Sensory, Physical, Emotional, Cognitive with collapsible sections and count badges. |
+| [x] | **Sent vs Received History Tabs** | ✅ Complete! Tabs filter between sent flares and received inbox items. |
+| [x] | **Edit Flare Feature** | ✅ Complete! Edit loads entry with pre-selected emojis, triggers, and message. Updates existing entry. |
+| [x] | **Resend Flare Button** | ✅ Complete! Resend button sends flare again to all contacts. |
 
 ---
 
