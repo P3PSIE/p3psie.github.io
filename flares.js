@@ -1514,7 +1514,20 @@ class AppState {
     // Save session and sync with Firebase if authenticated
     async save() {
         const history = StorageManager.getHistory();
-        history.push({...this.sessionData});
+
+        // If editing, update the existing entry
+        if (this.sessionData.editingIndex !== undefined) {
+            const editIndex = this.sessionData.editingIndex;
+            const dataToSave = {...this.sessionData};
+            delete dataToSave.editingIndex; // Remove the editing flag
+            history[editIndex] = dataToSave;
+        } else {
+            // Otherwise, add new entry
+            const dataToSave = {...this.sessionData};
+            delete dataToSave.editingIndex; // Ensure no editing flag
+            history.push(dataToSave);
+        }
+
         StorageManager.saveHistory(history);
 
         // Sync to cloud if logged in
@@ -1971,64 +1984,127 @@ class UIRenderer {
         });
     }
 
-    static renderHistory() {
+    static async renderHistory(type = 'sent') {
         const list = document.getElementById('historyList');
-        const history = StorageManager.getHistory().reverse().slice(0, 10);
 
-        if (history.length === 0) {
-            list.innerHTML = '<p class="empty-state">No history yet</p>';
-            return;
-        }
-
+        let items = [];
         const moodLabels = {
             green: '🟢 Stable',
             orange: '🟡 Struggling',
             red: '🔴 Overwhelmed'
         };
 
-        list.innerHTML = history.map((entry, index) => {
-            const date = new Date(entry.timestamp).toLocaleString();
-            const historyIndex = StorageManager.getHistory().length - 1 - index;
-            return `
-                <div class="history-item" data-index="${historyIndex}">
-                    <div class="history-content">
-                        <div class="history-mood">${moodLabels[entry.mood]}</div>
-                        <div class="history-time">${date}</div>
-                        <div class="history-emojis">${entry.emojis.map(e => e.emoji).join(' ')}</div>
+        if (type === 'sent') {
+            // Show sent flares (from local history)
+            items = StorageManager.getHistory().reverse().slice(0, 20);
+
+            if (items.length === 0) {
+                list.innerHTML = '<p class="empty-state">No sent flares yet</p>';
+                return;
+            }
+
+            list.innerHTML = items.map((entry, index) => {
+                const date = new Date(entry.timestamp).toLocaleString();
+                const historyIndex = StorageManager.getHistory().length - 1 - index;
+                return `
+                    <div class="history-item" data-index="${historyIndex}">
+                        <div class="history-content">
+                            <div class="history-mood">${moodLabels[entry.mood]}</div>
+                            <div class="history-time">${date}</div>
+                            <div class="history-emojis">${entry.emojis.map(e => e.emoji).join(' ')}</div>
+                            ${entry.message ? `<div class="history-message">"${entry.message}"</div>` : ''}
+                        </div>
+                        <div class="history-actions">
+                            <button class="history-action-btn resend-btn" data-index="${historyIndex}" title="Resend">📤</button>
+                            <button class="history-action-btn edit-btn" data-index="${historyIndex}" title="Edit & Resend">✏️</button>
+                            <button class="history-action-btn delete-btn" data-index="${historyIndex}" title="Delete">🗑️</button>
+                        </div>
                     </div>
-                    <div class="history-actions">
-                        <button class="history-action-btn resend-btn" data-index="${historyIndex}" title="Resend">📤</button>
-                        <button class="history-action-btn edit-btn" data-index="${historyIndex}" title="Edit & Resend">✏️</button>
-                        <button class="history-action-btn delete-btn" data-index="${historyIndex}" title="Delete">🗑️</button>
+                `;
+            }).join('');
+
+            // Add event listeners for sent history actions
+            list.querySelectorAll('.resend-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    HistoryActions.resend(index);
+                });
+            });
+
+            list.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    HistoryActions.edit(index);
+                });
+            });
+
+            list.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    HistoryActions.delete(index);
+                });
+            });
+
+        } else if (type === 'received') {
+            // Show received flares (from inbox)
+            items = await InboxManager.fetchAllInboxItems();
+
+            if (items.length === 0) {
+                list.innerHTML = '<p class="empty-state">No received flares yet</p>';
+                return;
+            }
+
+            list.innerHTML = items.slice(0, 20).map(flare => {
+                const date = new Date(flare.createdAt || flare.timestamp).toLocaleString();
+                const moodLabel = {
+                    green: "I'm Okay",
+                    orange: "I'm Struggling",
+                    red: "I'm Overwhelmed"
+                }[flare.mood] || flare.mood;
+
+                return `
+                    <div class="history-item received ${flare.read ? '' : 'unread'}">
+                        <div class="history-content">
+                            <div class="history-sender">${flare.senderName || 'Someone'}</div>
+                            <div class="history-mood">${moodLabels[flare.mood]}</div>
+                            <div class="history-time">${date}</div>
+                            <div class="history-emojis">${flare.emojis ? flare.emojis.map(e => e.emoji).join(' ') : ''}</div>
+                            ${flare.message ? `<div class="history-message">"${flare.message}"</div>` : ''}
+                        </div>
+                        <div class="history-actions">
+                            ${!flare.read ? '<button class="history-action-btn mark-read-btn" data-id="' + flare.id + '" title="Mark Read">✓</button>' : ''}
+                            <button class="history-action-btn delete-received-btn" data-id="${flare.id}" title="Delete">🗑️</button>
+                        </div>
                     </div>
-                </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
 
-        // Add event listeners for history actions
-        list.querySelectorAll('.resend-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const index = parseInt(btn.dataset.index);
-                HistoryActions.resend(index);
+            // Add event listeners for received history actions
+            list.querySelectorAll('.mark-read-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    await InboxManager.markAsRead(id);
+                    btn.remove();
+                    InboxManager.updateBadge();
+                });
             });
-        });
 
-        list.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const index = parseInt(btn.dataset.index);
-                HistoryActions.edit(index);
+            list.querySelectorAll('.delete-received-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    if (confirm('Delete this received flare?')) {
+                        await InboxManager.deleteInboxItem(id);
+                        await UIRenderer.renderHistory('received');
+                        InboxManager.updateBadge();
+                    }
+                });
             });
-        });
-
-        list.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const index = parseInt(btn.dataset.index);
-                HistoryActions.delete(index);
-            });
-        });
+        }
     }
 }
 
@@ -2060,6 +2136,7 @@ class HistoryActions {
             mood: entry.mood,
             emojis: [...entry.emojis],
             triggers: [...(entry.triggers || [])],
+            message: entry.message || '',
             timestamp: entry.timestamp,
             editingIndex: index // Mark that we're editing
         };
@@ -2160,6 +2237,16 @@ async function initApp() {
         }
         UIRenderer.renderTriggers(appState.sessionData.mood);
         ScreenManager.showScreen('triggersScreen');
+
+        // Pre-select triggers if editing
+        if (appState.sessionData.triggers && appState.sessionData.triggers.length > 0) {
+            setTimeout(() => {
+                appState.sessionData.triggers.forEach(({ id }) => {
+                    const btn = document.querySelector(`.trigger-btn[data-trigger-id="${id}"]`);
+                    if (btn) btn.classList.add('selected');
+                });
+            }, 100);
+        }
     });
 
     document.getElementById('backToEmoji').addEventListener('click', () => {
@@ -2169,6 +2256,15 @@ async function initApp() {
     document.getElementById('continueToPreview').addEventListener('click', () => {
         UIRenderer.renderPreview(appState.sessionData);
         UIRenderer.renderSupports(StorageManager.getSupports());
+
+        // Populate message field if editing
+        const messageInput = document.getElementById('flareMessage');
+        const charCount = document.getElementById('messageCharCount');
+        if (messageInput && appState.sessionData.message) {
+            messageInput.value = appState.sessionData.message;
+            if (charCount) charCount.textContent = appState.sessionData.message.length;
+        }
+
         ScreenManager.showScreen('previewScreen');
     });
 
@@ -2311,11 +2407,27 @@ async function initApp() {
         UIRenderer.renderSupports(StorageManager.getSupports());
     });
 
+    // History tabs
+    let currentHistoryTab = 'sent';
+    document.querySelectorAll('.history-tab').forEach(tab => {
+        tab.addEventListener('click', async () => {
+            const tabType = tab.dataset.tab;
+            currentHistoryTab = tabType;
+
+            // Update active state
+            document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Render appropriate history
+            await UIRenderer.renderHistory(tabType);
+        });
+    });
+
     // Clear history
     document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear your history?')) {
+        if (confirm('Are you sure you want to clear all your history?')) {
             StorageManager.clearHistory();
-            UIRenderer.renderHistory();
+            UIRenderer.renderHistory(currentHistoryTab);
         }
     });
 

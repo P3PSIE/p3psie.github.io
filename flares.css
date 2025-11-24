@@ -2406,3 +2406,71 @@ input.input:disabled {
 .mood-red .category-count {
     background: var(--mood-red);
 }
+
+/* ============================================================================
+   History Tabs
+   ============================================================================ */
+
+.history-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--divider);
+}
+
+.history-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.history-tab:hover {
+    color: var(--text-primary);
+}
+
+.history-tab.active {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+.history-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--text-primary);
+}
+
+.history-actions {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.history-sender {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.history-message {
+    font-style: italic;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--divider);
+}
+
+.history-item.received.unread {
+    border-left: 3px solid var(--mood-orange);
+}
