@@ -1362,8 +1362,9 @@ class InboxManager {
             if (markReadBtn) {
                 markReadBtn.addEventListener('click', async () => {
                     await this.markAsRead(flare.id);
-                    // Re-render to show updated state
-                    await this.renderInboxScreen();
+                    // Update UI optimistically
+                    itemEl.classList.remove('unread');
+                    markReadBtn.remove();
                     this.updateBadge();
                 });
             }
@@ -1430,8 +1431,16 @@ class InboxManager {
             await Promise.all(updatePromises);
             console.log(`Marked ${updatePromises.length} items as read`);
 
-            // Re-render the inbox screen to reflect changes
-            await this.renderInboxScreen();
+            // Update UI optimistically - remove unread class and mark read buttons
+            const inboxList = document.getElementById('inboxList');
+            if (inboxList) {
+                const unreadItems = inboxList.querySelectorAll('.inbox-item.unread');
+                unreadItems.forEach(item => {
+                    item.classList.remove('unread');
+                    const markReadBtn = item.querySelector('.mark-read-btn');
+                    if (markReadBtn) markReadBtn.remove();
+                });
+            }
 
             // Update badge
             this.updateBadge();
