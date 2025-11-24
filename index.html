@@ -240,18 +240,9 @@
                     <span class="message-counter"><span id="messageCharCount">0</span>/200</span>
                 </div>
 
-                <div class="support-list" id="supportList">
-                    <h3>Send to:</h3>
-                    <div class="supports-container" id="supportsContainer">
-                        <!-- Support contacts populated dynamically -->
-                    </div>
-                    <button class="btn btn-link" id="manageSupportBtn">Manage Support Contacts</button>
-                </div>
-
                 <div class="screen-actions">
                     <button class="btn btn-secondary" id="backToTriggers">Back</button>
                     <button class="btn btn-primary" id="sendToLinked" style="display: none;">Send Flare</button>
-                    <button class="btn btn-primary" id="sendNotification" style="display: none;">Send via Email</button>
                     <button class="btn btn-primary" id="sendViaSMS">Send via SMS</button>
                 </div>
             </div>
@@ -314,24 +305,9 @@
 
                     <hr>
 
-                    <h3>Support Contacts</h3>
-                    <p class="help-text">Add people who can receive your Flares notifications</p>
-
-                    <div class="contacts-list" id="contactsList">
-                        <!-- Contacts populated dynamically -->
-                    </div>
-
-                    <div class="add-contact-form">
-                        <input type="text" id="contactName" placeholder="Name" class="input">
-                        <input type="email" id="contactEmail" placeholder="Email" class="input">
-                        <button class="btn btn-primary" id="addContactBtn">Add Contact</button>
-                    </div>
-
-                    <hr>
-
                     <!-- Linked Contacts Section (Push Notifications) -->
                     <div class="linked-contacts-section" id="linkedContactsSection" style="display: none;">
-                        <h3>Linked Contacts</h3>
+                        <h3>Contacts</h3>
                         <p class="help-text">Connect with people who have Flares to send instant push notifications</p>
 
                         <div class="link-actions">

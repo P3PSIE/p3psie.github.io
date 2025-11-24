@@ -1922,105 +1922,9 @@ class UIRenderer {
         `;
     }
 
-    static async renderSupports(supports) {
-        const container = document.getElementById('supportsContainer');
-        const emailBtn = document.getElementById('sendNotification');
-        const smsBtn = document.getElementById('sendViaSMS');
-        const linkedBtn = document.getElementById('sendToLinked');
+    // renderSupports - REMOVED (no longer needed, only using linked contacts via Firebase)
 
-        // Get linked contacts if logged in
-        let linkedContacts = [];
-        if (AuthManager.currentUser) {
-            try {
-                linkedContacts = await LinkingManager.getLinkedContacts();
-            } catch (e) {
-                console.error('Error fetching linked contacts:', e);
-            }
-        }
-
-        const hasSupports = supports.length > 0;
-        const hasLinked = linkedContacts.length > 0;
-
-        if (!hasSupports && !hasLinked) {
-            container.innerHTML = '<p class="empty-state">No contacts yet. Add support contacts or link with other Flares users in settings.</p>';
-            // Hide all primary buttons, show SMS as fallback
-            if (linkedBtn) linkedBtn.style.display = 'none';
-            emailBtn.style.display = 'none';
-            smsBtn.style.display = 'inline-block';
-            return;
-        }
-
-        // Show appropriate buttons based on contact types
-        if (linkedBtn) linkedBtn.style.display = hasLinked ? 'inline-block' : 'none';
-        emailBtn.style.display = hasSupports ? 'inline-block' : 'none';
-        // SMS button is always visible (set in HTML)
-
-        let html = '';
-
-        // Show linked contacts first (they get instant notifications)
-        if (hasLinked) {
-            html += `
-                <div class="contacts-section">
-                    <h4 class="contacts-section-title">Linked Users (Instant)</h4>
-                    ${linkedContacts.map(contact => `
-                        <label class="support-item linked-contact">
-                            <input type="checkbox" class="linked-checkbox" data-id="${contact.userId}" checked>
-                            <span class="support-name">${contact.displayName || contact.email || 'User'}</span>
-                            <span class="support-badge">Instant</span>
-                        </label>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        // Show email contacts
-        if (hasSupports) {
-            html += `
-                <div class="contacts-section">
-                    ${hasLinked ? '<h4 class="contacts-section-title">Email Contacts</h4>' : ''}
-                    ${supports.map(support => `
-                        <label class="support-item">
-                            <input type="checkbox" class="support-checkbox" data-id="${support.id}" checked>
-                            <span class="support-name">${support.name}</span>
-                            <span class="support-email">${support.email}</span>
-                        </label>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        container.innerHTML = html;
-    }
-
-    static renderContactsList() {
-        const list = document.getElementById('contactsList');
-        const supports = StorageManager.getSupports();
-
-        if (supports.length === 0) {
-            list.innerHTML = '<p class="empty-state">No contacts yet</p>';
-            return;
-        }
-
-        list.innerHTML = supports.map(support => `
-            <div class="contact-item">
-                <div>
-                    <div class="contact-name">${support.name}</div>
-                    <div class="contact-email">${support.email}</div>
-                </div>
-                <button class="btn-icon-delete" data-id="${support.id}">×</button>
-            </div>
-        `).join('');
-
-        // Add delete handlers
-        list.querySelectorAll('.btn-icon-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                StorageManager.removeSupport(id);
-                UIRenderer.renderContactsList();
-                UIRenderer.renderSupports(StorageManager.getSupports());
-            });
-        });
-    }
+    // renderContactsList - REMOVED (no longer needed, only using linked contacts via Firebase)
 
     static async renderHistory(type = 'sent') {
         const list = document.getElementById('historyList');
@@ -2293,7 +2197,6 @@ async function initApp() {
 
     document.getElementById('continueToPreview').addEventListener('click', () => {
         UIRenderer.renderPreview(appState.sessionData);
-        UIRenderer.renderSupports(StorageManager.getSupports());
 
         // Populate message field if editing
         const messageInput = document.getElementById('flareMessage');
@@ -2343,30 +2246,7 @@ async function initApp() {
         });
     }
 
-    // Send notification via email
-    document.getElementById('sendNotification').addEventListener('click', async () => {
-        const selectedSupports = Array.from(document.querySelectorAll('.support-checkbox:checked'))
-            .map(cb => {
-                const id = parseInt(cb.dataset.id);
-                return StorageManager.getSupports().find(s => s.id === id);
-            });
-
-        if (selectedSupports.length === 0) {
-            alert('Please select at least one support contact or add contacts in settings');
-            return;
-        }
-
-        await appState.save();
-
-        // Send push notifications to linked contacts
-        await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
-
-        // Send email to selected supports
-        NotificationManager.sendViaEmail(appState.sessionData, selectedSupports);
-
-        Haptics.success();
-        ScreenManager.showModal('successModal');
-    });
+    // Send notification via email - REMOVED (redundant with Firebase push notifications)
 
     // Send notification via SMS
     document.getElementById('sendViaSMS').addEventListener('click', async () => {
@@ -2390,7 +2270,6 @@ async function initApp() {
 
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => {
-        UIRenderer.renderContactsList();
         UIRenderer.renderHistory();
         ScreenManager.showModal('settingsModal');
     });
@@ -2413,37 +2292,13 @@ async function initApp() {
         await InboxManager.markAllAsRead();
     });
 
-    document.getElementById('manageSupportBtn').addEventListener('click', () => {
-        UIRenderer.renderContactsList();
-        UIRenderer.renderHistory();
-        ScreenManager.showModal('settingsModal');
-    });
+    // Manage Support Contacts button - REMOVED (redundant with Firebase)
 
     document.getElementById('closeSettings').addEventListener('click', () => {
         ScreenManager.hideModal('settingsModal');
     });
 
-    // Add contact
-    document.getElementById('addContactBtn').addEventListener('click', () => {
-        const name = document.getElementById('contactName').value.trim();
-        const email = document.getElementById('contactEmail').value.trim();
-
-        if (!name || !email) {
-            alert('Please enter both name and email');
-            return;
-        }
-
-        if (!email.includes('@')) {
-            alert('Please enter a valid email address');
-            return;
-        }
-
-        StorageManager.addSupport(name, email);
-        document.getElementById('contactName').value = '';
-        document.getElementById('contactEmail').value = '';
-        UIRenderer.renderContactsList();
-        UIRenderer.renderSupports(StorageManager.getSupports());
-    });
+    // Add contact button - REMOVED (redundant with Firebase)
 
     // History tabs
     let currentHistoryTab = 'sent';
