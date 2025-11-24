@@ -1663,6 +1663,7 @@ class NotificationManager {
         const triggers = sessionData.triggers.length > 0
             ? sessionData.triggers.map(t => `${t.icon} ${t.label}`).join(', ')
             : 'None specified';
+        const customMessage = sessionData.message ? `\n\nPersonal Note: ${sessionData.message}\n` : '';
 
         return `
 Flares Check-in
@@ -1672,7 +1673,7 @@ Current State: ${moodLabels[sessionData.mood]}
 
 Emotions: ${emojis || 'Not specified'}
 
-Contributing Factors: ${triggers}
+Contributing Factors: ${triggers}${customMessage}
 
 ---
 This is an automated message from Flares mood tracking app.
