@@ -31,8 +31,8 @@ service cloud.firestore {
 
       // Inbox subcollection - for receiving flares
       match /inbox/{messageId} {
-        // User can read/delete their own inbox
-        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        // User can read/update/delete their own inbox
+        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
         // Any authenticated user can send a message (create)
         allow create: if request.auth != null;
       }

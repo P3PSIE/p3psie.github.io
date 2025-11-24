@@ -1138,20 +1138,26 @@ class InboxManager {
 
     // Mark a flare as read
     static async markAsRead(flareId) {
+        console.log('markAsRead called for:', flareId);
+
         if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            console.error('markAsRead: Missing required auth or firebase objects');
             return;
         }
 
         const { doc, updateDoc } = window.firebaseDbFunctions;
         const userId = AuthManager.currentUser.uid;
 
+        console.log('markAsRead: Attempting to update Firestore for user:', userId);
+
         try {
             await updateDoc(doc(window.firebaseDb, 'users', userId, 'inbox', flareId), {
                 read: true
             });
-            console.log('Marked flare as read:', flareId);
+            console.log('markAsRead: Successfully marked flare as read in Firestore:', flareId);
         } catch (error) {
-            console.error('Error marking flare as read:', error);
+            console.error('markAsRead: Error marking flare as read:', error);
+            throw error;
         }
     }
 
@@ -1360,13 +1366,23 @@ class InboxManager {
             // Event listeners
             const markReadBtn = itemEl.querySelector('.mark-read-btn');
             if (markReadBtn) {
-                markReadBtn.addEventListener('click', async () => {
-                    await this.markAsRead(flare.id);
-                    // Update UI optimistically
-                    itemEl.classList.remove('unread');
-                    markReadBtn.remove();
-                    this.updateBadge();
+                console.log('Found mark read button for flare:', flare.id);
+                markReadBtn.addEventListener('click', async (e) => {
+                    console.log('Mark read button clicked for flare:', flare.id);
+                    e.stopPropagation();
+                    try {
+                        await this.markAsRead(flare.id);
+                        console.log('Successfully marked as read, updating UI');
+                        // Update UI optimistically
+                        itemEl.classList.remove('unread');
+                        markReadBtn.remove();
+                        this.updateBadge();
+                    } catch (error) {
+                        console.error('Error in mark read handler:', error);
+                    }
                 });
+            } else {
+                console.log('No mark read button found for flare (already read?):', flare.id);
             }
 
             const deleteBtn = itemEl.querySelector('.delete-btn');
@@ -1407,7 +1423,10 @@ class InboxManager {
 
     // Mark all inbox items as read
     static async markAllAsRead() {
+        console.log('markAllAsRead called');
+
         if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            console.error('markAllAsRead: Missing required auth or firebase objects');
             return;
         }
 
@@ -1420,6 +1439,8 @@ class InboxManager {
             const snapshot = await getDocs(unreadQuery);
             const updatePromises = [];
 
+            console.log(`markAllAsRead: Found ${snapshot.size} unread items`);
+
             snapshot.forEach((docSnapshot) => {
                 updatePromises.push(
                     updateDoc(doc(window.firebaseDb, 'users', userId, 'inbox', docSnapshot.id), {
@@ -1429,12 +1450,13 @@ class InboxManager {
             });
 
             await Promise.all(updatePromises);
-            console.log(`Marked ${updatePromises.length} items as read`);
+            console.log(`markAllAsRead: Successfully marked ${updatePromises.length} items as read in Firestore`);
 
             // Update UI optimistically - remove unread class and mark read buttons
             const inboxList = document.getElementById('inboxList');
             if (inboxList) {
                 const unreadItems = inboxList.querySelectorAll('.inbox-item.unread');
+                console.log(`markAllAsRead: Updating UI for ${unreadItems.length} unread items`);
                 unreadItems.forEach(item => {
                     item.classList.remove('unread');
                     const markReadBtn = item.querySelector('.mark-read-btn');
@@ -1445,7 +1467,7 @@ class InboxManager {
             // Update badge
             this.updateBadge();
         } catch (error) {
-            console.error('Error marking all as read:', error);
+            console.error('markAllAsRead: Error marking all as read:', error);
         }
     }
 
