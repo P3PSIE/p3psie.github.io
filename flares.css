@@ -1657,6 +1657,42 @@ hr {
     margin-bottom: 1rem;
 }
 
+/* QR Code Display */
+.qr-code-container {
+    text-align: center;
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 15px;
+    display: inline-block;
+    width: 100%;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#qrCodeDiv {
+    max-width: 100%;
+    height: auto;
+}
+
+#qrCodeDiv img {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+}
+
+.qr-code-label {
+    color: var(--gray-700);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0;
+}
+
 .link-code-input {
     font-size: 1.5rem;
     text-align: center;

@@ -80,6 +80,9 @@
         // Dispatch event when Firebase is ready
         window.dispatchEvent(new Event('firebaseReady'));
     </script>
+
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="stars"></div>
@@ -541,6 +544,10 @@
                     <p class="help-text">Share this code with someone you want to connect with. They can enter it in their Flares app.</p>
                     <div class="link-code-display" id="linkCodeDisplay">
                         <span class="link-code">------</span>
+                    </div>
+                    <div class="qr-code-container" id="qrCodeContainer" style="display: none;">
+                        <div id="qrCodeDiv"></div>
+                        <p class="qr-code-label">Scan to connect</p>
                     </div>
                     <p class="link-code-expiry" id="linkCodeExpiry">Expires in 10 minutes</p>
                     <button class="btn btn-primary" id="copyCodeBtn">Copy Code</button>

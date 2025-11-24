@@ -2681,6 +2681,35 @@ function deleteCustomTrigger(id) {
 // Linking System Handlers
 // ============================================================================
 
+// QR Code Generation
+function generateQRCode(code) {
+    const qrDiv = document.getElementById('qrCodeDiv');
+    const container = document.getElementById('qrCodeContainer');
+
+    if (!qrDiv || !container) return;
+
+    // Clear previous QR code
+    qrDiv.innerHTML = '';
+
+    // Show container
+    container.style.display = 'flex';
+
+    try {
+        // Use QRCode library to generate QR code
+        new QRCode(qrDiv, {
+            text: code,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (error) {
+        console.error('Error generating QR code:', error);
+        container.style.display = 'none';
+    }
+}
+
 function setupLinkingHandlers() {
     // Generate link code
     const generateBtn = document.getElementById('generateLinkCodeBtn');
@@ -2689,6 +2718,9 @@ function setupLinkingHandlers() {
             try {
                 const { code, expiresAt } = await LinkingManager.createLinkCode();
                 document.querySelector('#linkCodeDisplay .link-code').textContent = code;
+
+                // Generate QR code
+                generateQRCode(code);
 
                 // Update expiry countdown
                 updateCodeExpiry(expiresAt);
