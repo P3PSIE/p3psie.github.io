@@ -2160,6 +2160,11 @@ class UIRenderer {
             if (isFavorite) {
                 btn.classList.add('favorited');
             }
+            // Check if this emoji is already selected
+            const isSelected = appState.sessionData.emojis.some(e => e.emoji === emoji);
+            if (isSelected) {
+                btn.classList.add('selected');
+            }
             btn.dataset.emoji = emoji;
             btn.dataset.label = label;
             btn.dataset.originalLabel = label;
@@ -3170,6 +3175,11 @@ async function initApp() {
     });
 
     // Navigation buttons
+    // Manage custom emojis from emoji screen
+    document.getElementById('manageEmojisFromScreen').addEventListener('click', () => {
+        ScreenManager.showModal('customEmojiModal');
+    });
+
     document.getElementById('backToMood').addEventListener('click', () => {
         ScreenManager.showScreen('moodScreen');
     });
