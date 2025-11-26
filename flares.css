@@ -343,7 +343,8 @@
 }
 
 .screen-actions .btn-tertiary {
-    order: 3;
+    order: 0;
+    margin-right: auto;
 }
 
 /* Flares (Mood Selection) */
