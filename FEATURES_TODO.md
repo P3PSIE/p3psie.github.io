@@ -40,9 +40,9 @@ This document tracks features present in the iOS app that are missing or incompl
 | [x] | **Phone Number Field** | ✅ Complete! Optional phone number field in profile for SMS fallback. |
 | [x] | **Clear History by Type** | ✅ Complete! Separate buttons to clear sent, received, or all flares. |
 | [x] | **Quick Profile Setup Flow** | ✅ Complete! Welcome modal for new users with onboarding steps and profile setup. |
-| [ ] | **Contact Connection Type Indicators** | iOS shows icons for how contacts were connected (QR, NFC, Code, etc). |
-| [ ] | **Deep Linking** | iOS supports `flare://received` URLs to open specific screens from notifications. |
-| [ ] | **Emoji Selection Labels** | iOS shows emoji feeling labels in a popup when tapping. |
+| [x] | **Contact Connection Type Indicators** | ✅ Complete! Shows connection type icons (🔗 Link Code, 📷 QR, 📡 NFC, 📍 Nearby) next to contacts. |
+| [x] | **Deep Linking** | ✅ Complete! Hash-based routing supports `#/inbox`, `#/inbox/:id`, `#/settings`, etc. Notifications navigate to specific inbox items. |
+| [x] | **Emoji Selection Labels** | ✅ Complete! Tooltip popup shows emoji labels on tap (mobile) and hover (desktop). |
 
 ---
 

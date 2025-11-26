@@ -1040,7 +1040,8 @@ class LinkingManager {
             userId: theirUid,
             displayName: linkData.displayName,
             email: linkData.email,
-            linkedAt: new Date().toISOString()
+            linkedAt: new Date().toISOString(),
+            connectionType: 'linkcode' // Track how they were linked
         });
 
         // Add me to their linked contacts
@@ -1049,7 +1050,8 @@ class LinkingManager {
             userId: myUid,
             displayName: AuthManager.currentUser.displayName || 'User',
             email: AuthManager.currentUser.email,
-            linkedAt: new Date().toISOString()
+            linkedAt: new Date().toISOString(),
+            connectionType: 'linkcode' // Track how they were linked
         });
 
         // Delete the used link code
@@ -1133,7 +1135,7 @@ class LinkingManager {
         for (const contact of linkedContacts) {
             try {
                 // Write to recipient's inbox subcollection
-                await addDoc(collection(window.firebaseDb, 'users', contact.userId, 'inbox'), {
+                const docRef = await addDoc(collection(window.firebaseDb, 'users', contact.userId, 'inbox'), {
                     senderId: AuthManager.currentUser.uid,
                     senderName: senderName,
                     type: 'flare',
@@ -1147,6 +1149,10 @@ class LinkingManager {
                     createdAt: new Date().toISOString(),
                     read: false
                 });
+
+                // Store deep link for push notifications
+                const deepLink = DeepLinkManager.createDeepLink(`inbox/${docRef.id}`);
+                console.log(`Created deep link: ${deepLink}`);
                 console.log(`Sent flare to ${contact.displayName || contact.email}'s inbox`);
             } catch (error) {
                 console.error(`Error sending flare to ${contact.userId}:`, error);
@@ -1312,7 +1318,8 @@ class InboxManager {
         toast.querySelector('.flare-toast-view').addEventListener('click', () => {
             this.markAsRead(flare.id);
             this.dismissToast(toast);
-            this.showFlareDetails(flare);
+            // Use deep link to navigate to inbox and highlight the item
+            DeepLinkManager.navigateTo(`inbox/${flare.id}`);
         });
 
         // Auto-dismiss after 10 seconds
@@ -1521,6 +1528,7 @@ class InboxManager {
             const itemEl = document.createElement('div');
             itemEl.className = `inbox-item ${flare.read ? '' : 'unread'}`;
             itemEl.dataset.id = flare.id;
+            itemEl.dataset.inboxId = flare.id; // For deep linking
 
             const timestamp = new Date(flare.timestamp || flare.createdAt);
             const timeAgo = this.getTimeAgo(timestamp);
@@ -1899,6 +1907,120 @@ class ScreenManager {
 
     static hideModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
+    }
+}
+
+// ============================================================================
+// Deep Linking Manager
+// ============================================================================
+
+class DeepLinkManager {
+    static init() {
+        // Listen for hash changes
+        window.addEventListener('hashchange', () => {
+            this.handleRoute();
+        });
+
+        // Handle initial route on page load
+        this.handleRoute();
+    }
+
+    static handleRoute() {
+        const hash = window.location.hash.slice(1); // Remove # prefix
+
+        // If no hash or just #, don't interfere with normal flow
+        if (!hash || hash === '/') {
+            return;
+        }
+
+        // Parse route
+        const [path, ...params] = hash.split('/').filter(Boolean);
+
+        console.log('[DeepLink] Navigating to:', path, params);
+
+        switch (path) {
+            case 'inbox':
+                this.navigateToInbox(params[0]); // params[0] might be itemId
+                break;
+
+            case 'home':
+            case 'mood':
+                ScreenManager.showScreen('moodScreen');
+                break;
+
+            case 'settings':
+                ScreenManager.showModal('settingsModal');
+                break;
+
+            case 'profile':
+                ScreenManager.showModal('editProfileModal');
+                break;
+
+            case 'links':
+            case 'link':
+                // Could open either generate or enter code modal
+                // Default to opening settings with linking tab
+                ScreenManager.showModal('settingsModal');
+                // Switch to linking tab if it exists
+                setTimeout(() => {
+                    const linksTab = document.querySelector('[data-tab="links"]');
+                    if (linksTab) linksTab.click();
+                }, 100);
+                break;
+
+            case 'received':
+                // Alias for inbox
+                this.navigateToInbox(params[0]);
+                break;
+
+            default:
+                console.warn('[DeepLink] Unknown route:', path);
+        }
+    }
+
+    static navigateToInbox(itemId = null) {
+        // Show inbox screen
+        ScreenManager.showScreen('inboxScreen');
+
+        // If itemId provided, highlight/scroll to that item
+        if (itemId) {
+            setTimeout(() => {
+                this.highlightInboxItem(itemId);
+            }, 300); // Wait for screen transition
+        }
+    }
+
+    static highlightInboxItem(itemId) {
+        // Find inbox item element
+        const itemElement = document.querySelector(`[data-inbox-id="${itemId}"]`);
+
+        if (itemElement) {
+            // Scroll to item
+            itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Add highlight effect
+            itemElement.classList.add('highlight-pulse');
+
+            // Remove highlight after animation
+            setTimeout(() => {
+                itemElement.classList.remove('highlight-pulse');
+            }, 2000);
+        } else {
+            console.warn('[DeepLink] Inbox item not found:', itemId);
+        }
+    }
+
+    static createDeepLink(path, params = {}) {
+        const baseUrl = window.location.origin + window.location.pathname;
+        const paramString = Object.entries(params)
+            .map(([key, val]) => `${key}=${encodeURIComponent(val)}`)
+            .join('&');
+
+        return `${baseUrl}#/${path}${paramString ? '?' + paramString : ''}`;
+    }
+
+    static navigateTo(path) {
+        window.location.hash = `#/${path}`;
     }
 }
 
@@ -2757,6 +2879,9 @@ async function initApp() {
 
     // Initialize swipe gestures for navigation
     SwipeGestures.init();
+
+    // Initialize deep linking
+    DeepLinkManager.init();
 
     // Load draft if exists
     const hasDraft = appState.loadDraft();
@@ -3671,6 +3796,17 @@ function updateCodeExpiry(expiresAt) {
     updateTimer();
 }
 
+// Helper to get connection type icon
+function getConnectionTypeIcon(connectionType) {
+    const icons = {
+        'linkcode': { icon: '🔗', label: 'Link Code' },
+        'qr': { icon: '📷', label: 'QR Code' },
+        'nfc': { icon: '📡', label: 'NFC Tap' },
+        'nearby': { icon: '📍', label: 'Nearby' }
+    };
+    return icons[connectionType] || icons['linkcode'];
+}
+
 async function renderLinkedContactsList() {
     const list = document.getElementById('linkedContactsList');
     if (!list) return;
@@ -3682,13 +3818,16 @@ async function renderLinkedContactsList() {
         return;
     }
 
-    list.innerHTML = linkedContacts.map(contact => `
+    list.innerHTML = linkedContacts.map(contact => {
+        const connectionInfo = getConnectionTypeIcon(contact.connectionType);
+        return `
         <div class="linked-contact-item">
             <div class="linked-contact-avatar">${(contact.displayName || 'U').charAt(0).toUpperCase()}</div>
             <div class="linked-contact-info">
                 <div class="linked-contact-name">
                     ${contact.displayName || 'User'}
                     <span class="connection-type-icons">
+                        <span class="connection-icon" title="${connectionInfo.label}">${connectionInfo.icon}</span>
                         <span class="connection-icon" title="Push Notifications">🔔</span>
                     </span>
                 </div>
@@ -3696,7 +3835,8 @@ async function renderLinkedContactsList() {
             </div>
             <button class="btn-icon-delete" onclick="unlinkContact('${contact.id}')">×</button>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 async function unlinkContact(contactId) {
