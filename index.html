@@ -80,15 +80,39 @@
         // Dispatch event when Firebase is ready
         window.dispatchEvent(new Event('firebaseReady'));
     </script>
+
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-content">
+            <img src="assets/icons/mood-green.png" alt="Flare" class="splash-flare splash-flare-1">
+            <img src="assets/icons/mood-orange.png" alt="Flare" class="splash-flare splash-flare-2">
+            <img src="assets/icons/mood-red.png" alt="Flare" class="splash-flare splash-flare-3">
+            <h1 class="splash-title">Flare</h1>
+        </div>
+    </div>
+
     <div class="stars"></div>
     <div class="flares-app">
+        <!-- Fixed Settings Button (Top Right) -->
+        <button class="settings-btn" id="settingsBtn">⚙️</button>
+
         <!-- Navigation Header -->
         <nav class="flares-nav">
             <div class="nav-container">
-                <div class="logo">Flares</div>
-                <button class="settings-btn" id="settingsBtn">⚙️</button>
+                <div class="nav-spacer"></div>
+                <div class="nav-center">
+                    <h1 class="nav-logo-text">Flare</h1>
+                </div>
+                <div class="nav-actions">
+                    <button class="nav-btn inbox-btn" id="inboxBtn" title="Received Flares" style="display: none;">
+                        <span class="inbox-icon">📥</span>
+                        <span class="inbox-badge" id="inboxBadge" style="display: none;">0</span>
+                    </button>
+                </div>
             </div>
         </nav>
 
@@ -96,8 +120,7 @@
         <div class="screen active" id="authScreen">
             <div class="screen-content auth-content">
                 <div class="auth-logo">
-                    <div class="auth-flare"></div>
-                    <h1 class="auth-title">Flares</h1>
+                    <img class="auth-flare-img" src="assets/icons/logo.png" alt="Flares logo">
                     <p class="auth-tagline">Track your mood. Share with your support network.</p>
                 </div>
 
@@ -142,29 +165,23 @@
             </div>
         </div>
 
+        <!-- Info Button (Top Left) -->
+        <button class="info-btn" id="infoBtn" title="About Flares">ⓘ</button>
+
         <!-- Screen 1: Mood Selection (Flares) -->
         <div class="screen" id="moodScreen">
             <div class="screen-content">
-                <h1 class="screen-title">How are you feeling?</h1>
-                <p class="screen-subtitle">Select your current state</p>
-
                 <div class="flares-container">
                     <button class="flare-btn green" data-mood="green">
-                        <div class="flare-light"></div>
-                        <span class="flare-label">Stable</span>
-                        <span class="flare-desc">Feeling good and in control</span>
+                        <img class="flare-icon" src="assets/icons/mood-green.png" alt="Green flare">
                     </button>
 
                     <button class="flare-btn orange" data-mood="orange">
-                        <div class="flare-light"></div>
-                        <span class="flare-label">Struggling</span>
-                        <span class="flare-desc">Finding things challenging</span>
+                        <img class="flare-icon" src="assets/icons/mood-orange.png" alt="Orange flare">
                     </button>
 
                     <button class="flare-btn red" data-mood="red">
-                        <div class="flare-light"></div>
-                        <span class="flare-label">Overwhelmed</span>
-                        <span class="flare-desc">Need support right now</span>
+                        <img class="flare-icon" src="assets/icons/mood-red.png" alt="Red flare">
                     </button>
                 </div>
             </div>
@@ -174,7 +191,10 @@
         <div class="screen" id="emojiScreen">
             <div class="screen-content">
                 <h1 class="screen-title">What describes your mood?</h1>
-                <p class="screen-subtitle">Select one or more emotions</p>
+                <p class="screen-subtitle">
+                    Select one or more emotions
+                    <span class="selection-badge" id="emojiSelectionBadge" style="display: none;">0 selected</span>
+                </p>
 
                 <div class="emoji-grid" id="emojiGrid">
                     <!-- Populated dynamically based on mood -->
@@ -214,19 +234,54 @@
                     <!-- Preview populated dynamically -->
                 </div>
 
-                <div class="support-list" id="supportList">
-                    <h3>Send to:</h3>
-                    <div class="supports-container" id="supportsContainer">
-                        <!-- Support contacts populated dynamically -->
+                <div class="message-section">
+                    <label class="message-label" for="flareMessage">Add a message (optional)</label>
+                    <textarea
+                        id="flareMessage"
+                        class="input message-input"
+                        placeholder="Write a personal note to include with your flare..."
+                        maxlength="200"
+                        rows="3"
+                    ></textarea>
+                    <span class="message-counter"><span id="messageCharCount">0</span>/200</span>
+                </div>
+
+                <div class="contacts-section" id="contactsSection" style="display: none;">
+                    <div class="contacts-header">
+                        <h4>Send to contacts</h4>
+                        <span class="contacts-count" id="contactsCount">0 of 0 active</span>
                     </div>
-                    <button class="btn btn-link" id="manageSupportBtn">Manage Support Contacts</button>
+                    <div id="contactsList" class="contacts-list">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
 
                 <div class="screen-actions">
                     <button class="btn btn-secondary" id="backToTriggers">Back</button>
                     <button class="btn btn-primary" id="sendToLinked" style="display: none;">Send Flare</button>
-                    <button class="btn btn-primary" id="sendNotification" style="display: none;">Send via Email</button>
                     <button class="btn btn-primary" id="sendViaSMS">Send via SMS</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inbox Screen: Received Flares -->
+        <div class="screen" id="inboxScreen">
+            <div class="screen-content">
+                <h1 class="screen-title">Received Flares</h1>
+                <p class="screen-subtitle">Updates from your connections</p>
+
+                <div class="inbox-list" id="inboxList">
+                    <!-- Received flares populated dynamically -->
+                    <div class="empty-state" id="inboxEmptyState">
+                        <div class="empty-icon">📭</div>
+                        <p>No flares received yet</p>
+                        <p class="help-text">When your connections send you updates, they'll appear here</p>
+                    </div>
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-secondary" id="backFromInbox">Back</button>
+                    <button class="btn btn-tertiary" id="markAllReadBtn">Mark All Read</button>
                 </div>
             </div>
         </div>
@@ -266,24 +321,9 @@
 
                     <hr>
 
-                    <h3>Support Contacts</h3>
-                    <p class="help-text">Add people who can receive your Flares notifications</p>
-
-                    <div class="contacts-list" id="contactsList">
-                        <!-- Contacts populated dynamically -->
-                    </div>
-
-                    <div class="add-contact-form">
-                        <input type="text" id="contactName" placeholder="Name" class="input">
-                        <input type="email" id="contactEmail" placeholder="Email" class="input">
-                        <button class="btn btn-primary" id="addContactBtn">Add Contact</button>
-                    </div>
-
-                    <hr>
-
                     <!-- Linked Contacts Section (Push Notifications) -->
                     <div class="linked-contacts-section" id="linkedContactsSection" style="display: none;">
-                        <h3>Linked Contacts</h3>
+                        <h3>Contacts</h3>
                         <p class="help-text">Connect with people who have Flares to send instant push notifications</p>
 
                         <div class="link-actions">
@@ -307,10 +347,21 @@
                     <hr>
 
                     <h3>Your History</h3>
+
+                    <div class="history-tabs">
+                        <button class="history-tab active" data-tab="sent">Sent</button>
+                        <button class="history-tab" data-tab="received">Received</button>
+                    </div>
+
                     <div class="history-list" id="historyList">
                         <!-- History populated dynamically -->
                     </div>
-                    <button class="btn btn-link" id="clearHistoryBtn">Clear History</button>
+
+                    <div class="history-actions">
+                        <button class="btn btn-link" id="clearSentBtn">Clear Sent</button>
+                        <button class="btn btn-link" id="clearReceivedBtn">Clear Received</button>
+                        <button class="btn btn-link" id="clearHistoryBtn">Clear All</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -466,6 +517,77 @@
             </div>
         </div>
 
+        <!-- Customize Label Modal -->
+        <div class="modal" id="customizeLabelModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Customize Label</h2>
+                    <button class="modal-close" id="closeCustomizeLabel">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Personalize this label to better match your experience</p>
+                    <div class="customize-preview">
+                        <span class="customize-preview-icon" id="customizePreviewIcon">😊</span>
+                        <span class="customize-preview-label" id="customizePreviewLabel">Happy</span>
+                    </div>
+                    <div class="form-section">
+                        <label>Custom Label</label>
+                        <input type="text" id="customLabelInput" class="input" placeholder="Enter your custom label" maxlength="50">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelCustomizeLabel">Cancel</button>
+                        <button class="btn btn-tertiary" id="resetCustomLabel">Reset to Default</button>
+                        <button class="btn btn-primary" id="saveCustomLabel">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Modal -->
+        <div class="modal" id="infoModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>About Flares</h2>
+                    <button class="modal-close" id="closeInfo">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Flares helps you quickly communicate how you're feeling to your support network.</p>
+
+                    <h3>🎯 How Flares Work:</h3>
+                    <ul>
+                        <li>🟢 <strong>Green</strong> - Feeling stable and okay</li>
+                        <li>🟡 <strong>Orange</strong> - Starting to struggle</li>
+                        <li>🔴 <strong>Red</strong> - Feeling overwhelmed and need support</li>
+                    </ul>
+
+                    <h3>📝 Sending a Flare:</h3>
+                    <ol>
+                        <li><strong>Select your mood</strong> - Choose green, orange, or red</li>
+                        <li><strong>Pick emotions</strong> (optional) - Tap emojis that match how you feel</li>
+                        <li><strong>Add triggers</strong> (optional) - Select what contributed to your state</li>
+                        <li><strong>Write a message</strong> (optional) - Add personal context</li>
+                        <li><strong>Review & send</strong> - Your contacts receive an instant notification</li>
+                    </ol>
+
+                    <h3>✨ Pro Tips:</h3>
+                    <ul>
+                        <li><strong>Star favorites</strong> - Tap ★ on emojis/triggers to sort them to the top</li>
+                        <li><strong>Customize labels</strong> - Long-press any emoji/trigger to rename it</li>
+                        <li><strong>Add custom emojis</strong> - Create your own in Settings</li>
+                        <li><strong>Auto-save drafts</strong> - Your progress is saved automatically</li>
+                        <li><strong>Edit & resend</strong> - View history in Settings to resend or edit past flares</li>
+                        <li><strong>Selective sending</strong> - Toggle contacts on/off before sending</li>
+                    </ul>
+
+                    <h3>🔗 Linking with Contacts:</h3>
+                    <p>Go to Settings to generate a link code and share with trusted friends, family, or therapists. They'll receive your flares and can support you when needed.</p>
+
+                    <h3>📱 Inbox:</h3>
+                    <p>Receive flares from your linked contacts. Check the inbox icon (📥) to see who needs support.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Success Modal -->
         <div class="modal" id="successModal">
             <div class="modal-content success">
@@ -487,6 +609,10 @@
                     <p class="help-text">Share this code with someone you want to connect with. They can enter it in their Flares app.</p>
                     <div class="link-code-display" id="linkCodeDisplay">
                         <span class="link-code">------</span>
+                    </div>
+                    <div class="qr-code-container" id="qrCodeContainer" style="display: none;">
+                        <div id="qrCodeDiv"></div>
+                        <p class="qr-code-label">Scan to connect</p>
                     </div>
                     <p class="link-code-expiry" id="linkCodeExpiry">Expires in 10 minutes</p>
                     <button class="btn btn-primary" id="copyCodeBtn">Copy Code</button>
@@ -547,11 +673,83 @@
                         <p class="help-text small">Email cannot be changed</p>
                     </div>
 
+                    <div class="form-section">
+                        <label class="form-label" for="editPhone">Phone Number (Optional)</label>
+                        <input type="tel" id="editPhone" placeholder="(555) 123-4567" class="input">
+                        <p class="help-text small">For SMS fallback notifications</p>
+                    </div>
+
                     <div class="profile-edit-error" id="profileEditError"></div>
 
                     <div class="modal-actions">
                         <button class="btn btn-secondary" id="cancelEditProfile">Cancel</button>
                         <button class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Welcome/Onboarding Modal -->
+        <div class="modal" id="welcomeModal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>Welcome to Flares! 🎉</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="welcome-content">
+                        <p class="welcome-intro">
+                            Flares helps you quickly communicate how you're feeling to your support network.
+                            Let's get you set up in just a few steps.
+                        </p>
+
+                        <div class="onboarding-steps">
+                            <div class="onboarding-step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h3>Set up your profile</h3>
+                                    <p>Add your name and photo so contacts recognize you</p>
+                                </div>
+                            </div>
+
+                            <div class="onboarding-step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h3>Link with your support network</h3>
+                                    <p>Connect with friends, family, or therapists who want to support you</p>
+                                </div>
+                            </div>
+
+                            <div class="onboarding-step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h3>Send a flare when you need support</h3>
+                                    <p>Choose your mood, select emojis and triggers, and send to your contacts</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mood-preview">
+                            <h4>How Flares Work:</h4>
+                            <div class="mood-examples">
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-green.png" alt="Green flare" class="mood-example-icon">
+                                    <span>I'm Okay - Stable and doing well</span>
+                                </div>
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-orange.png" alt="Orange flare" class="mood-example-icon">
+                                    <span>I'm Struggling - Starting to have difficulty</span>
+                                </div>
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-red.png" alt="Red flare" class="mood-example-icon">
+                                    <span>I'm Overwhelmed - Need support now</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="skipWelcome">Skip for Now</button>
+                        <button class="btn btn-primary" id="setupProfile">Set Up Profile</button>
                     </div>
                 </div>
             </div>

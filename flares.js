@@ -39,35 +39,38 @@ const EMOJI_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.emojis :
     ]
 };
 
+// Trigger categories
+const TRIGGER_CATEGORIES = typeof FLARES_CONFIG !== 'undefined' && FLARES_CONFIG.triggerCategories ? FLARES_CONFIG.triggerCategories : {
+    sensory: { label: 'Sensory', icon: '👂' },
+    physical: { label: 'Physical', icon: '🏃' },
+    emotional: { label: 'Emotional', icon: '❤️' },
+    cognitive: { label: 'Cognitive', icon: '🧠' }
+};
+
+// Triggers organized by category
 const TRIGGERS_DATA = typeof FLARES_CONFIG !== 'undefined' ? FLARES_CONFIG.triggers : {
-    green: [
-        { id: 'good_news', label: 'Good news', icon: '📰' },
-        { id: 'social_time', label: 'Quality time with others', icon: '👥' },
-        { id: 'exercise', label: 'Exercise or movement', icon: '🏃' },
-        { id: 'achievement', label: 'Accomplished something', icon: '🎯' },
-        { id: 'rest', label: 'Good rest', icon: '😴' },
-        { id: 'nature', label: 'Time in nature', icon: '🌳' }
-    ],
-    orange: [
-        { id: 'work_stress', label: 'Work pressure', icon: '💼' },
-        { id: 'social_conflict', label: 'Social conflict', icon: '💬' },
-        { id: 'lack_sleep', label: 'Lack of sleep', icon: '😴' },
-        { id: 'financial', label: 'Financial concerns', icon: '💰' },
-        { id: 'health_concern', label: 'Health concerns', icon: '🏥' },
-        { id: 'change', label: 'Unexpected changes', icon: '🔄' },
-        { id: 'deadlines', label: 'Deadlines', icon: '⏰' },
-        { id: 'isolation', label: 'Feeling isolated', icon: '🚪' }
-    ],
-    red: [
+    sensory: [
         { id: 'loud_noises', label: 'Overwhelming sounds', icon: '🔊' },
-        { id: 'bright_lights', label: 'Too many bright lights', icon: '💡' },
+        { id: 'bright_lights', label: 'Bright lights', icon: '💡' },
         { id: 'crowds', label: 'Crowded spaces', icon: '👥' },
-        { id: 'confrontation', label: 'Confrontation', icon: '⚠️' },
-        { id: 'loss', label: 'Loss or grief', icon: '💔' },
-        { id: 'panic', label: 'Panic attack', icon: '😱' },
-        { id: 'sensory_overload', label: 'Sensory overload', icon: '🎆' },
-        { id: 'trauma_trigger', label: 'Trauma reminder', icon: '🚨' },
-        { id: 'physical_pain', label: 'Physical pain', icon: '🤕' },
+        { id: 'sensory_overload', label: 'Sensory overload', icon: '🎆' }
+    ],
+    physical: [
+        { id: 'exercise', label: 'Exercise or movement', icon: '🏃' },
+        { id: 'lack_sleep', label: 'Lack of sleep', icon: '😴' },
+        { id: 'rest', label: 'Good rest', icon: '🛏️' },
+        { id: 'physical_pain', label: 'Physical pain', icon: '🤕' }
+    ],
+    emotional: [
+        { id: 'social_time', label: 'Quality time with others', icon: '👥' },
+        { id: 'social_conflict', label: 'Social conflict', icon: '💬' },
+        { id: 'isolation', label: 'Feeling isolated', icon: '🚪' },
+        { id: 'loss', label: 'Loss or grief', icon: '💔' }
+    ],
+    cognitive: [
+        { id: 'work_stress', label: 'Work pressure', icon: '💼' },
+        { id: 'deadlines', label: 'Deadlines', icon: '⏰' },
+        { id: 'financial', label: 'Financial concerns', icon: '💰' },
         { id: 'intrusive_thoughts', label: 'Intrusive thoughts', icon: '🌀' }
     ]
 };
@@ -301,6 +304,108 @@ class CustomTriggerManager {
 }
 
 // ============================================================================
+// Favorite Manager
+// ============================================================================
+
+class FavoriteManager {
+    static STORAGE_KEY = 'flares_favorites';
+
+    static getFavorites() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : { emojis: [], triggers: [] };
+    }
+
+    static saveFavorites(favorites) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(favorites));
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
+    }
+
+    static toggleEmojiFavorite(emoji) {
+        const favorites = this.getFavorites();
+        const index = favorites.emojis.indexOf(emoji);
+
+        if (index > -1) {
+            favorites.emojis.splice(index, 1);
+        } else {
+            favorites.emojis.push(emoji);
+        }
+
+        this.saveFavorites(favorites);
+        return index === -1; // Return true if now favorited
+    }
+
+    static toggleTriggerFavorite(triggerId) {
+        const favorites = this.getFavorites();
+        const index = favorites.triggers.indexOf(triggerId);
+
+        if (index > -1) {
+            favorites.triggers.splice(index, 1);
+        } else {
+            favorites.triggers.push(triggerId);
+        }
+
+        this.saveFavorites(favorites);
+        return index === -1; // Return true if now favorited
+    }
+
+    static isEmojiFavorite(emoji) {
+        const favorites = this.getFavorites();
+        return favorites.emojis.includes(emoji);
+    }
+
+    static isTriggerFavorite(triggerId) {
+        const favorites = this.getFavorites();
+        return favorites.triggers.includes(triggerId);
+    }
+}
+
+// ============================================================================
+// Custom Label Manager
+// ============================================================================
+
+class CustomLabelManager {
+    static STORAGE_KEY = 'flares_custom_labels';
+
+    static getCustomLabels() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : {};
+    }
+
+    static saveCustomLabels(labels) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(labels));
+    }
+
+    static setCustomLabel(type, key, customLabel) {
+        // type: 'emoji' or 'trigger'
+        // key: emoji character (for emojis) or trigger id (for triggers)
+        const labels = this.getCustomLabels();
+        if (!labels[type]) {
+            labels[type] = {};
+        }
+        labels[type][key] = customLabel;
+        this.saveCustomLabels(labels);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
+    }
+
+    static getCustomLabel(type, key) {
+        const labels = this.getCustomLabels();
+        return labels[type] && labels[type][key] ? labels[type][key] : null;
+    }
+
+    static resetCustomLabel(type, key) {
+        const labels = this.getCustomLabels();
+        if (labels[type] && labels[type][key]) {
+            delete labels[type][key];
+            this.saveCustomLabels(labels);
+            // Sync to cloud
+            CloudStorageManager.syncToCloud();
+        }
+    }
+}
+
+// ============================================================================
 // Authentication Manager (Firebase)
 // ============================================================================
 
@@ -347,6 +452,11 @@ class AuthManager {
             // Sync data when user logs in
             if (user) {
                 CloudStorageManager.syncFromCloud();
+                // Update inbox badge
+                InboxManager.updateBadge();
+            } else {
+                // Hide badge when logged out
+                InboxManager.hideBadge();
             }
 
             // Resolve the init promise on first auth state
@@ -459,12 +569,14 @@ class CloudStorageManager {
             const localHistory = StorageManager.getHistory();
             const localCustomEmojis = CustomEmojiManager.getCustomEmojis();
             const localCustomTriggers = CustomTriggerManager.getCustomTriggers();
+            const localCustomLabels = CustomLabelManager.getCustomLabels();
 
             await setDoc(userDocRef, {
                 supports: localSupports,
                 history: localHistory,
                 customEmojis: localCustomEmojis,
                 customTriggers: localCustomTriggers,
+                customLabels: localCustomLabels,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             });
@@ -487,6 +599,7 @@ class CloudStorageManager {
                 if (data.history) StorageManager.saveHistory(data.history);
                 if (data.customEmojis) CustomEmojiManager.saveCustomEmojis(data.customEmojis);
                 if (data.customTriggers) CustomTriggerManager.saveCustomTriggers(data.customTriggers);
+                if (data.customLabels) CustomLabelManager.saveCustomLabels(data.customLabels);
 
                 console.log('Data synced from cloud');
             }
@@ -507,6 +620,7 @@ class CloudStorageManager {
                 history: StorageManager.getHistory(),
                 customEmojis: CustomEmojiManager.getCustomEmojis(),
                 customTriggers: CustomTriggerManager.getCustomTriggers(),
+                customLabels: CustomLabelManager.getCustomLabels(),
                 updatedAt: new Date().toISOString()
             }, { merge: true });
 
@@ -532,6 +646,67 @@ class CloudStorageManager {
             await this.syncToCloud();
         } catch (error) {
             console.error('Error adding history entry:', error);
+        }
+    }
+}
+
+// ============================================================================
+// Profile Manager
+// ============================================================================
+
+// ============================================================================
+// Onboarding Manager
+// ============================================================================
+
+class OnboardingManager {
+    static STORAGE_KEY = 'flares_onboarding';
+
+    // Check if user has completed welcome flow
+    static hasCompletedWelcome() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        if (!data) return false;
+
+        const onboarding = JSON.parse(data);
+        return onboarding.welcomeComplete === true;
+    }
+
+    // Mark welcome as complete
+    static markWelcomeComplete() {
+        const onboarding = this.getOnboardingData();
+        onboarding.welcomeComplete = true;
+        onboarding.welcomeCompletedAt = new Date().toISOString();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(onboarding));
+    }
+
+    // Get onboarding data
+    static getOnboardingData() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : { welcomeComplete: false };
+    }
+
+    // Check if should show welcome modal
+    static shouldShowWelcome(user) {
+        if (!user) return false;
+        if (this.hasCompletedWelcome()) return false;
+
+        // Check if user is new (created within last 24 hours)
+        const userCreatedAt = user.metadata?.creationTime;
+        if (!userCreatedAt) return true; // Default to showing for users without creation time
+
+        const createdDate = new Date(userCreatedAt);
+        const now = new Date();
+        const hoursSinceCreation = (now - createdDate) / (1000 * 60 * 60);
+
+        // Show welcome if user created account in last 24 hours
+        return hoursSinceCreation < 24;
+    }
+
+    // Show welcome modal if appropriate
+    static showWelcomeIfNeeded(user) {
+        if (this.shouldShowWelcome(user)) {
+            setTimeout(() => {
+                ScreenManager.showModal('welcomeModal');
+            }, 500); // Small delay for better UX
         }
     }
 }
@@ -569,6 +744,22 @@ class ProfileManager {
             await setDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'), {
                 displayName,
                 email: AuthManager.currentUser.email,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+    }
+
+    // Update phone number
+    static async updatePhoneNumber(phoneNumber) {
+        const profile = this.getProfile();
+        profile.phoneNumber = phoneNumber || null;
+        this.saveProfile(profile);
+
+        // Also save to Firestore
+        if (AuthManager.currentUser && window.firebaseDb && window.firebaseDbFunctions) {
+            const { doc, setDoc } = window.firebaseDbFunctions;
+            await setDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'), {
+                phoneNumber: phoneNumber || null,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
         }
@@ -617,11 +808,16 @@ class ProfileManager {
             const profileDoc = await getDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'));
             if (profileDoc.exists()) {
                 const data = profileDoc.data();
+                const profile = this.getProfile();
+
                 if (data.avatarUrl) {
-                    const profile = this.getProfile();
                     profile.avatarUrl = data.avatarUrl;
-                    this.saveProfile(profile);
                 }
+                if (data.phoneNumber) {
+                    profile.phoneNumber = data.phoneNumber;
+                }
+
+                this.saveProfile(profile);
             }
         } catch (error) {
             console.error('Error loading profile from cloud:', error);
@@ -907,13 +1103,18 @@ class LinkingManager {
     }
 
     // Send a Flare notification to all linked contacts
-    static async sendFlareToLinkedContacts(sessionData) {
+    static async sendFlareToLinkedContacts(sessionData, selectedContactIds = null) {
         if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
             return;
         }
 
         const { collection, addDoc } = window.firebaseDbFunctions;
-        const linkedContacts = await this.getLinkedContacts();
+        let linkedContacts = await this.getLinkedContacts();
+
+        // Filter to only selected contacts if specified
+        if (selectedContactIds && selectedContactIds.length > 0) {
+            linkedContacts = linkedContacts.filter(c => selectedContactIds.includes(c.id));
+        }
 
         if (linkedContacts.length === 0) {
             console.log('No linked contacts to notify');
@@ -941,6 +1142,7 @@ class LinkingManager {
                     body: sessionData.emojis.map(e => e.emoji).join(' ') || 'Check on them',
                     emojis: sessionData.emojis,
                     triggers: sessionData.triggers,
+                    message: sessionData.message || '',
                     timestamp: sessionData.timestamp,
                     createdAt: new Date().toISOString(),
                     read: false
@@ -995,6 +1197,10 @@ class InboxManager {
                     if (!flare.read && isRecent) {
                         this.showFlareNotification(flare);
                     }
+                } else if (change.type === 'modified') {
+                    // Item was modified (e.g., marked as read)
+                    // Update badge count
+                    this.updateBadge();
                 }
             });
         }, (error) => {
@@ -1125,20 +1331,26 @@ class InboxManager {
 
     // Mark a flare as read
     static async markAsRead(flareId) {
+        console.log('markAsRead called for:', flareId);
+
         if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            console.error('markAsRead: Missing required auth or firebase objects');
             return;
         }
 
         const { doc, updateDoc } = window.firebaseDbFunctions;
         const userId = AuthManager.currentUser.uid;
 
+        console.log('markAsRead: Attempting to update Firestore for user:', userId);
+
         try {
             await updateDoc(doc(window.firebaseDb, 'users', userId, 'inbox', flareId), {
                 read: true
             });
-            console.log('Marked flare as read:', flareId);
+            console.log('markAsRead: Successfully marked flare as read in Firestore:', flareId);
         } catch (error) {
-            console.error('Error marking flare as read:', error);
+            console.error('markAsRead: Error marking flare as read:', error);
+            throw error;
         }
     }
 
@@ -1211,6 +1423,284 @@ class InboxManager {
         modal.querySelector('.flare-detail-overlay').addEventListener('click', closeModal);
         modal.querySelector('.flare-detail-close').addEventListener('click', closeModal);
     }
+
+    // Fetch all inbox items for display
+    static async fetchAllInboxItems() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return [];
+        }
+
+        const { collection, query, orderBy, getDocs } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const inboxQuery = query(inboxRef, orderBy('createdAt', 'desc'));
+
+        try {
+            const snapshot = await getDocs(inboxQuery);
+            const items = [];
+            snapshot.forEach((doc) => {
+                items.push({ id: doc.id, ...doc.data() });
+            });
+            return items;
+        } catch (error) {
+            console.error('Error fetching inbox items:', error);
+            return [];
+        }
+    }
+
+    // Count unread items and update badge
+    static async updateBadge() {
+        if (!AuthManager.currentUser) {
+            this.hideBadge();
+            return;
+        }
+
+        const { collection, query, where, getDocs } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const unreadQuery = query(inboxRef, where('read', '==', false));
+
+        try {
+            const snapshot = await getDocs(unreadQuery);
+            const count = snapshot.size;
+
+            const badge = document.getElementById('inboxBadge');
+            const inboxBtn = document.getElementById('inboxBtn');
+
+            if (count > 0) {
+                // Show inbox button and badge when there are unread items
+                if (inboxBtn) inboxBtn.style.display = 'block';
+                if (badge) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'flex';
+                }
+            } else {
+                // Hide inbox button and badge when no unread items
+                if (inboxBtn) inboxBtn.style.display = 'none';
+                if (badge) badge.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error updating badge:', error);
+        }
+    }
+
+    static hideBadge() {
+        const badge = document.getElementById('inboxBadge');
+        const inboxBtn = document.getElementById('inboxBtn');
+        if (badge) badge.style.display = 'none';
+        if (inboxBtn) inboxBtn.style.display = 'none';
+    }
+
+    // Render inbox screen
+    static async renderInboxScreen() {
+        const inboxList = document.getElementById('inboxList');
+        const emptyState = document.getElementById('inboxEmptyState');
+
+        if (!inboxList) return;
+
+        const items = await this.fetchAllInboxItems();
+
+        // Clear existing items (except empty state)
+        const existingItems = inboxList.querySelectorAll('.inbox-item');
+        existingItems.forEach(item => item.remove());
+
+        if (items.length === 0) {
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        const moodLabels = {
+            green: "I'm Okay",
+            orange: "I'm Struggling",
+            red: "I'm Overwhelmed"
+        };
+
+        items.forEach(flare => {
+            const itemEl = document.createElement('div');
+            itemEl.className = `inbox-item ${flare.read ? '' : 'unread'}`;
+            itemEl.dataset.id = flare.id;
+
+            const timestamp = new Date(flare.timestamp || flare.createdAt);
+            const timeAgo = this.getTimeAgo(timestamp);
+            const initial = (flare.senderName || 'U').charAt(0).toUpperCase();
+
+            const emojisHtml = flare.emojis && flare.emojis.length > 0
+                ? `<div class="inbox-emojis">${flare.emojis.map(e => e.emoji).join(' ')}</div>`
+                : '';
+
+            const triggersHtml = flare.triggers && flare.triggers.length > 0
+                ? `<div class="inbox-triggers">
+                    ${flare.triggers.map(t => `<span class="inbox-trigger-tag">${t.icon || ''} ${t.label}</span>`).join('')}
+                   </div>`
+                : '';
+
+            const messageHtml = flare.message
+                ? `<div class="inbox-message">"${flare.message}"</div>`
+                : '';
+
+            itemEl.innerHTML = `
+                <div class="inbox-item-header">
+                    <div class="inbox-sender">
+                        <div class="inbox-sender-avatar">${initial}</div>
+                        <div class="inbox-sender-info">
+                            <span class="inbox-sender-name">${flare.senderName || 'Someone'}</span>
+                            <span class="inbox-time">${timeAgo}</span>
+                        </div>
+                    </div>
+                    <span class="inbox-mood-badge ${flare.mood}">${moodLabels[flare.mood] || flare.mood}</span>
+                </div>
+                <div class="inbox-item-body">
+                    ${emojisHtml}
+                    ${triggersHtml}
+                    ${messageHtml}
+                </div>
+                <div class="inbox-item-actions">
+                    ${!flare.read ? '<button class="inbox-action-btn mark-read-btn">Mark Read</button>' : ''}
+                    <button class="inbox-action-btn delete-btn">Delete</button>
+                </div>
+            `;
+
+            // Event listeners
+            const markReadBtn = itemEl.querySelector('.mark-read-btn');
+            if (markReadBtn) {
+                console.log('Found mark read button for flare:', flare.id);
+                markReadBtn.addEventListener('click', async (e) => {
+                    console.log('Mark read button clicked for flare:', flare.id);
+                    e.stopPropagation();
+                    try {
+                        await this.markAsRead(flare.id);
+                        console.log('Successfully marked as read, updating UI');
+                        // Update UI optimistically
+                        itemEl.classList.remove('unread');
+                        markReadBtn.remove();
+                        this.updateBadge();
+                    } catch (error) {
+                        console.error('Error in mark read handler:', error);
+                    }
+                });
+            } else {
+                console.log('No mark read button found for flare (already read?):', flare.id);
+            }
+
+            const deleteBtn = itemEl.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    await this.deleteInboxItem(flare.id);
+                    itemEl.remove();
+                    this.updateBadge();
+
+                    // Check if list is now empty
+                    const remainingItems = inboxList.querySelectorAll('.inbox-item');
+                    if (remainingItems.length === 0 && emptyState) {
+                        emptyState.style.display = 'block';
+                    }
+                });
+            }
+
+            inboxList.appendChild(itemEl);
+        });
+    }
+
+    // Delete an inbox item
+    static async deleteInboxItem(flareId) {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        const { doc, deleteDoc } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+
+        try {
+            await deleteDoc(doc(window.firebaseDb, 'users', userId, 'inbox', flareId));
+            console.log('Deleted inbox item:', flareId);
+        } catch (error) {
+            console.error('Error deleting inbox item:', error);
+        }
+    }
+
+    // Clear all inbox items
+    static async clearAllInbox() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        try {
+            const items = await this.fetchAllInboxItems();
+
+            // Delete each item
+            for (const item of items) {
+                await this.deleteInboxItem(item.id);
+            }
+
+            console.log(`Cleared ${items.length} inbox items`);
+        } catch (error) {
+            console.error('Error clearing inbox:', error);
+        }
+    }
+
+    // Mark all inbox items as read
+    static async markAllAsRead() {
+        console.log('markAllAsRead called');
+
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            console.error('markAllAsRead: Missing required auth or firebase objects');
+            return;
+        }
+
+        const { collection, query, where, getDocs, doc, updateDoc } = window.firebaseDbFunctions;
+        const userId = AuthManager.currentUser.uid;
+        const inboxRef = collection(window.firebaseDb, 'users', userId, 'inbox');
+        const unreadQuery = query(inboxRef, where('read', '==', false));
+
+        try {
+            const snapshot = await getDocs(unreadQuery);
+            const updatePromises = [];
+
+            console.log(`markAllAsRead: Found ${snapshot.size} unread items`);
+
+            snapshot.forEach((docSnapshot) => {
+                updatePromises.push(
+                    updateDoc(doc(window.firebaseDb, 'users', userId, 'inbox', docSnapshot.id), {
+                        read: true
+                    })
+                );
+            });
+
+            await Promise.all(updatePromises);
+            console.log(`markAllAsRead: Successfully marked ${updatePromises.length} items as read in Firestore`);
+
+            // Update UI optimistically - remove unread class and mark read buttons
+            const inboxList = document.getElementById('inboxList');
+            if (inboxList) {
+                const unreadItems = inboxList.querySelectorAll('.inbox-item.unread');
+                console.log(`markAllAsRead: Updating UI for ${unreadItems.length} unread items`);
+                unreadItems.forEach(item => {
+                    item.classList.remove('unread');
+                    const markReadBtn = item.querySelector('.mark-read-btn');
+                    if (markReadBtn) markReadBtn.remove();
+                });
+            }
+
+            // Update badge
+            this.updateBadge();
+        } catch (error) {
+            console.error('markAllAsRead: Error marking all as read:', error);
+        }
+    }
+
+    // Helper: Get time ago string
+    static getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+
+        return date.toLocaleDateString();
+    }
 }
 
 // ============================================================================
@@ -1224,6 +1714,7 @@ class AppState {
             mood: null,
             emojis: [],
             triggers: [],
+            message: '',
             timestamp: null
         };
     }
@@ -1231,6 +1722,12 @@ class AppState {
     setMood(mood) {
         this.sessionData.mood = mood;
         this.sessionData.timestamp = new Date().toISOString();
+        this.saveDraft();
+    }
+
+    setMessage(message) {
+        this.sessionData.message = message.trim().substring(0, 200);
+        this.saveDraft();
     }
 
     toggleEmoji(emoji, label) {
@@ -1240,6 +1737,9 @@ class AppState {
         } else {
             this.sessionData.emojis.push({ emoji, label });
         }
+        // Update selection count badge
+        UIRenderer.updateEmojiSelectionBadge(this.sessionData.emojis.length);
+        this.saveDraft();
     }
 
     toggleTrigger(id, label, icon) {
@@ -1249,6 +1749,7 @@ class AppState {
         } else {
             this.sessionData.triggers.push({ id, label, icon });
         }
+        this.saveDraft();
     }
 
     reset() {
@@ -1256,20 +1757,76 @@ class AppState {
             mood: null,
             emojis: [],
             triggers: [],
+            message: '',
             timestamp: null
         };
+        // Clear message input
+        const messageInput = document.getElementById('flareMessage');
+        if (messageInput) messageInput.value = '';
+        const charCount = document.getElementById('messageCharCount');
+        if (charCount) charCount.textContent = '0';
+        // Clear draft
+        this.clearDraft();
+    }
+
+    // Draft persistence methods
+    saveDraft() {
+        // Don't save draft if we're editing an existing entry
+        if (this.sessionData.editingIndex !== undefined) return;
+
+        // Only save if there's some progress (mood selected or emojis/triggers added)
+        if (this.sessionData.mood || this.sessionData.emojis.length > 0 || this.sessionData.triggers.length > 0) {
+            localStorage.setItem('flares_draft', JSON.stringify(this.sessionData));
+        }
+    }
+
+    loadDraft() {
+        const draft = localStorage.getItem('flares_draft');
+        if (draft) {
+            try {
+                const draftData = JSON.parse(draft);
+                // Only load draft if it has meaningful content
+                if (draftData.mood || draftData.emojis?.length > 0 || draftData.triggers?.length > 0) {
+                    this.sessionData = draftData;
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error loading draft:', error);
+            }
+        }
+        return false;
+    }
+
+    clearDraft() {
+        localStorage.removeItem('flares_draft');
     }
 
     // Save session and sync with Firebase if authenticated
     async save() {
         const history = StorageManager.getHistory();
-        history.push({...this.sessionData});
+
+        // If editing, update the existing entry
+        if (this.sessionData.editingIndex !== undefined) {
+            const editIndex = this.sessionData.editingIndex;
+            const dataToSave = {...this.sessionData};
+            delete dataToSave.editingIndex; // Remove the editing flag
+            history[editIndex] = dataToSave;
+        } else {
+            // Otherwise, add new entry
+            const dataToSave = {...this.sessionData};
+            delete dataToSave.editingIndex; // Ensure no editing flag
+            history.push(dataToSave);
+        }
+
         StorageManager.saveHistory(history);
 
         // Sync to cloud if logged in
         if (!AuthManager.isGuestMode()) {
             await CloudStorageManager.addHistoryEntry(this.sessionData);
         }
+
+        // Clear draft after successful save
+        this.clearDraft();
     }
 }
 
@@ -1362,6 +1919,7 @@ class NotificationManager {
         const triggers = sessionData.triggers.length > 0
             ? sessionData.triggers.map(t => `${t.icon} ${t.label}`).join(', ')
             : 'None specified';
+        const customMessage = sessionData.message ? `\n\nPersonal Note: ${sessionData.message}\n` : '';
 
         return `
 Flares Check-in
@@ -1371,7 +1929,7 @@ Current State: ${moodLabels[sessionData.mood]}
 
 Emotions: ${emojis || 'Not specified'}
 
-Contributing Factors: ${triggers}
+Contributing Factors: ${triggers}${customMessage}
 
 ---
 This is an automated message from Flares mood tracking app.
@@ -1441,51 +1999,327 @@ class UIRenderer {
         const customEmojis = CustomEmojiManager.getEmojisForMood(mood);
         const allEmojis = [...defaultEmojis, ...customEmojis];
 
+        // Sort emojis: favorites first, then alphabetical
+        allEmojis.sort((a, b) => {
+            const aFav = FavoriteManager.isEmojiFavorite(a.emoji);
+            const bFav = FavoriteManager.isEmojiFavorite(b.emoji);
+
+            if (aFav && !bFav) return -1;
+            if (!aFav && bFav) return 1;
+            return a.label.localeCompare(b.label);
+        });
+
         allEmojis.forEach(({ emoji, label }) => {
+            // Check for custom label
+            const customLabel = CustomLabelManager.getCustomLabel('emoji', emoji);
+            const displayLabel = customLabel || label;
+            const isFavorite = FavoriteManager.isEmojiFavorite(emoji);
+
             const btn = document.createElement('button');
             btn.className = 'emoji-btn';
+            if (isFavorite) {
+                btn.classList.add('favorited');
+            }
             btn.dataset.emoji = emoji;
             btn.dataset.label = label;
+            btn.dataset.originalLabel = label;
             btn.innerHTML = `
+                <button class="emoji-star-btn" data-emoji="${emoji}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                    ${isFavorite ? '★' : '☆'}
+                </button>
                 <span class="emoji-icon">${emoji}</span>
-                <span class="emoji-label">${label}</span>
+                <span class="emoji-label">${displayLabel}</span>
             `;
+
+            // Star button handler
+            const starBtn = btn.querySelector('.emoji-star-btn');
+            starBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent emoji selection
+                Haptics.light(starBtn);
+                const nowFavorited = FavoriteManager.toggleEmojiFavorite(emoji);
+                starBtn.textContent = nowFavorited ? '★' : '☆';
+                starBtn.title = nowFavorited ? 'Remove from favorites' : 'Add to favorites';
+                btn.classList.toggle('favorited', nowFavorited);
+
+                // Re-render to update sort order
+                this.renderEmojis(mood);
+            });
+
+            // Click handler
             btn.addEventListener('click', () => {
                 Haptics.light(btn);
                 btn.classList.toggle('selected');
-                appState.toggleEmoji(emoji, label);
+                appState.toggleEmoji(emoji, displayLabel);
             });
+
+            // Long-press handler
+            let pressTimer;
+            btn.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('emoji-star-btn')) return;
+                pressTimer = setTimeout(() => {
+                    Haptics.medium(btn);
+                    this.openCustomizeModal('emoji', emoji, label, displayLabel);
+                }, 500);
+            });
+
+            btn.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+
+            btn.addEventListener('touchmove', () => {
+                clearTimeout(pressTimer);
+            });
+
+            // Mouse long-press for desktop
+            btn.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('emoji-star-btn')) return;
+                pressTimer = setTimeout(() => {
+                    Haptics.medium(btn);
+                    this.openCustomizeModal('emoji', emoji, label, displayLabel);
+                }, 500);
+            });
+
+            btn.addEventListener('mouseup', () => {
+                clearTimeout(pressTimer);
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                clearTimeout(pressTimer);
+            });
+
             grid.appendChild(btn);
         });
+
+        // Initialize selection badge
+        this.updateEmojiSelectionBadge(appState.sessionData.emojis.length);
     }
 
     static renderTriggers(mood) {
-        const grid = document.getElementById('triggersGrid');
-        grid.innerHTML = '';
+        const container = document.getElementById('triggersGrid');
+        container.innerHTML = '';
 
-        // Set mood class on grid for styling
-        grid.className = `triggers-grid mood-${mood}`;
+        // Set mood class on container for styling
+        container.className = `triggers-container mood-${mood}`;
 
-        // Combine default triggers with custom triggers
-        const defaultTriggers = TRIGGERS_DATA[mood];
+        // Get custom triggers
         const customTriggers = CustomTriggerManager.getCustomTriggers();
-        const allTriggers = [...defaultTriggers, ...customTriggers];
 
-        allTriggers.forEach(({ id, label, icon }) => {
-            const btn = document.createElement('button');
-            btn.className = 'trigger-btn';
-            btn.dataset.triggerId = id;
-            btn.innerHTML = `
-                <span class="trigger-icon">${icon}</span>
-                <span class="trigger-label">${label}</span>
+        // Track selection counts per category
+        const selectionCounts = {};
+
+        // Render each category
+        Object.keys(TRIGGER_CATEGORIES).forEach(categoryId => {
+            const category = TRIGGER_CATEGORIES[categoryId];
+            const triggers = TRIGGERS_DATA[categoryId] || [];
+
+            // Create category section (collapsed by default)
+            const section = document.createElement('div');
+            section.className = 'trigger-category collapsed';
+            section.dataset.category = categoryId;
+
+            // Create collapsible header
+            const header = document.createElement('button');
+            header.className = 'trigger-category-header';
+            header.innerHTML = `
+                <span class="category-icon">${category.icon}</span>
+                <span class="category-label">${category.label}</span>
+                <span class="category-count" data-category="${categoryId}">0</span>
+                <span class="category-chevron">▼</span>
             `;
-            btn.addEventListener('click', () => {
-                Haptics.light(btn);
-                btn.classList.toggle('selected');
-                appState.toggleTrigger(id, label, icon);
+
+            // Create triggers grid
+            const grid = document.createElement('div');
+            grid.className = 'trigger-category-grid';
+
+            // Sort triggers: favorites first, then alphabetical
+            const sortedTriggers = [...triggers].sort((a, b) => {
+                const aFav = FavoriteManager.isTriggerFavorite(a.id);
+                const bFav = FavoriteManager.isTriggerFavorite(b.id);
+
+                if (aFav && !bFav) return -1;
+                if (!aFav && bFav) return 1;
+                return a.label.localeCompare(b.label);
             });
-            grid.appendChild(btn);
+
+            // Add triggers to grid
+            sortedTriggers.forEach(({ id, label, icon }) => {
+                // Check for custom label
+                const customLabel = CustomLabelManager.getCustomLabel('trigger', id);
+                const displayLabel = customLabel || label;
+                const isFavorite = FavoriteManager.isTriggerFavorite(id);
+
+                const btn = document.createElement('button');
+                btn.className = 'trigger-btn';
+                if (isFavorite) {
+                    btn.classList.add('favorited');
+                }
+                btn.dataset.triggerId = id;
+                btn.dataset.category = categoryId;
+                btn.dataset.originalLabel = label;
+                btn.innerHTML = `
+                    <button class="trigger-star-btn" data-trigger-id="${id}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        ${isFavorite ? '★' : '☆'}
+                    </button>
+                    <span class="trigger-icon">${icon}</span>
+                    <span class="trigger-label">${displayLabel}</span>
+                `;
+
+                // Star button handler
+                const starBtn = btn.querySelector('.trigger-star-btn');
+                starBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    Haptics.light(starBtn);
+                    const nowFavorited = FavoriteManager.toggleTriggerFavorite(id);
+                    starBtn.textContent = nowFavorited ? '★' : '☆';
+                    starBtn.title = nowFavorited ? 'Remove from favorites' : 'Add to favorites';
+                    btn.classList.toggle('favorited', nowFavorited);
+
+                    // Re-render to update sort order
+                    this.renderTriggers(mood);
+                });
+
+                // Click handler
+                btn.addEventListener('click', () => {
+                    Haptics.light(btn);
+                    btn.classList.toggle('selected');
+                    appState.toggleTrigger(id, displayLabel, icon);
+                    this.updateCategoryCount(categoryId);
+                });
+
+                // Long-press handler
+                let pressTimer;
+                btn.addEventListener('touchstart', (e) => {
+                    if (e.target.classList.contains('trigger-star-btn')) return;
+                    pressTimer = setTimeout(() => {
+                        Haptics.medium(btn);
+                        this.openCustomizeModal('trigger', id, label, displayLabel, icon);
+                    }, 500);
+                });
+
+                btn.addEventListener('touchend', () => {
+                    clearTimeout(pressTimer);
+                });
+
+                btn.addEventListener('touchmove', () => {
+                    clearTimeout(pressTimer);
+                });
+
+                // Mouse long-press for desktop
+                btn.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('trigger-star-btn')) return;
+                    pressTimer = setTimeout(() => {
+                        Haptics.medium(btn);
+                        this.openCustomizeModal('trigger', id, label, displayLabel, icon);
+                    }, 500);
+                });
+
+                btn.addEventListener('mouseup', () => {
+                    clearTimeout(pressTimer);
+                });
+
+                btn.addEventListener('mouseleave', () => {
+                    clearTimeout(pressTimer);
+                });
+
+                grid.appendChild(btn);
+            });
+
+            // Toggle collapse on header click
+            header.addEventListener('click', () => {
+                section.classList.toggle('collapsed');
+            });
+
+            section.appendChild(header);
+            section.appendChild(grid);
+            container.appendChild(section);
         });
+
+        // Add custom triggers section if any exist
+        if (customTriggers.length > 0) {
+            const section = document.createElement('div');
+            section.className = 'trigger-category collapsed';
+            section.dataset.category = 'custom';
+
+            const header = document.createElement('button');
+            header.className = 'trigger-category-header';
+            header.innerHTML = `
+                <span class="category-icon">⭐</span>
+                <span class="category-label">Custom</span>
+                <span class="category-count" data-category="custom">0</span>
+                <span class="category-chevron">▼</span>
+            `;
+
+            const grid = document.createElement('div');
+            grid.className = 'trigger-category-grid';
+
+            // Sort custom triggers: favorites first, then alphabetical
+            const sortedCustomTriggers = [...customTriggers].sort((a, b) => {
+                const aFav = FavoriteManager.isTriggerFavorite(a.id);
+                const bFav = FavoriteManager.isTriggerFavorite(b.id);
+
+                if (aFav && !bFav) return -1;
+                if (!aFav && bFav) return 1;
+                return a.label.localeCompare(b.label);
+            });
+
+            sortedCustomTriggers.forEach(({ id, label, icon }) => {
+                const isFavorite = FavoriteManager.isTriggerFavorite(id);
+
+                const btn = document.createElement('button');
+                btn.className = 'trigger-btn';
+                if (isFavorite) {
+                    btn.classList.add('favorited');
+                }
+                btn.dataset.triggerId = id;
+                btn.dataset.category = 'custom';
+                btn.innerHTML = `
+                    <button class="trigger-star-btn" data-trigger-id="${id}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        ${isFavorite ? '★' : '☆'}
+                    </button>
+                    <span class="trigger-icon">${icon}</span>
+                    <span class="trigger-label">${label}</span>
+                `;
+
+                // Star button handler
+                const starBtn = btn.querySelector('.trigger-star-btn');
+                starBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    Haptics.light(starBtn);
+                    const nowFavorited = FavoriteManager.toggleTriggerFavorite(id);
+                    starBtn.textContent = nowFavorited ? '★' : '☆';
+                    starBtn.title = nowFavorited ? 'Remove from favorites' : 'Add to favorites';
+                    btn.classList.toggle('favorited', nowFavorited);
+
+                    // Re-render to update sort order
+                    this.renderTriggers(mood);
+                });
+
+                btn.addEventListener('click', () => {
+                    Haptics.light(btn);
+                    btn.classList.toggle('selected');
+                    appState.toggleTrigger(id, label, icon);
+                    this.updateCategoryCount('custom');
+                });
+                grid.appendChild(btn);
+            });
+
+            header.addEventListener('click', () => {
+                section.classList.toggle('collapsed');
+            });
+
+            section.appendChild(header);
+            section.appendChild(grid);
+            container.appendChild(section);
+        }
+    }
+
+    static updateCategoryCount(categoryId) {
+        const countEl = document.querySelector(`.category-count[data-category="${categoryId}"]`);
+        if (countEl) {
+            const selected = document.querySelectorAll(`.trigger-btn[data-category="${categoryId}"].selected`).length;
+            countEl.textContent = selected;
+            countEl.style.display = selected > 0 ? 'flex' : 'none';
+        }
     }
 
     static renderPreview(sessionData) {
@@ -1528,164 +2362,240 @@ class UIRenderer {
         `;
     }
 
-    static async renderSupports(supports) {
-        const container = document.getElementById('supportsContainer');
-        const emailBtn = document.getElementById('sendNotification');
-        const smsBtn = document.getElementById('sendViaSMS');
-        const linkedBtn = document.getElementById('sendToLinked');
+    // renderSupports - REMOVED (no longer needed, only using linked contacts via Firebase)
 
-        // Get linked contacts if logged in
-        let linkedContacts = [];
-        if (AuthManager.currentUser) {
-            try {
-                linkedContacts = await LinkingManager.getLinkedContacts();
-            } catch (e) {
-                console.error('Error fetching linked contacts:', e);
-            }
-        }
+    // renderContactsList - REMOVED (no longer needed, only using linked contacts via Firebase)
 
-        const hasSupports = supports.length > 0;
-        const hasLinked = linkedContacts.length > 0;
-
-        if (!hasSupports && !hasLinked) {
-            container.innerHTML = '<p class="empty-state">No contacts yet. Add support contacts or link with other Flares users in settings.</p>';
-            // Hide all primary buttons, show SMS as fallback
-            if (linkedBtn) linkedBtn.style.display = 'none';
-            emailBtn.style.display = 'none';
-            smsBtn.style.display = 'inline-block';
-            return;
-        }
-
-        // Show appropriate buttons based on contact types
-        if (linkedBtn) linkedBtn.style.display = hasLinked ? 'inline-block' : 'none';
-        emailBtn.style.display = hasSupports ? 'inline-block' : 'none';
-        // SMS button is always visible (set in HTML)
-
-        let html = '';
-
-        // Show linked contacts first (they get instant notifications)
-        if (hasLinked) {
-            html += `
-                <div class="contacts-section">
-                    <h4 class="contacts-section-title">Linked Users (Instant)</h4>
-                    ${linkedContacts.map(contact => `
-                        <label class="support-item linked-contact">
-                            <input type="checkbox" class="linked-checkbox" data-id="${contact.userId}" checked>
-                            <span class="support-name">${contact.displayName || contact.email || 'User'}</span>
-                            <span class="support-badge">Instant</span>
-                        </label>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        // Show email contacts
-        if (hasSupports) {
-            html += `
-                <div class="contacts-section">
-                    ${hasLinked ? '<h4 class="contacts-section-title">Email Contacts</h4>' : ''}
-                    ${supports.map(support => `
-                        <label class="support-item">
-                            <input type="checkbox" class="support-checkbox" data-id="${support.id}" checked>
-                            <span class="support-name">${support.name}</span>
-                            <span class="support-email">${support.email}</span>
-                        </label>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        container.innerHTML = html;
-    }
-
-    static renderContactsList() {
-        const list = document.getElementById('contactsList');
-        const supports = StorageManager.getSupports();
-
-        if (supports.length === 0) {
-            list.innerHTML = '<p class="empty-state">No contacts yet</p>';
-            return;
-        }
-
-        list.innerHTML = supports.map(support => `
-            <div class="contact-item">
-                <div>
-                    <div class="contact-name">${support.name}</div>
-                    <div class="contact-email">${support.email}</div>
-                </div>
-                <button class="btn-icon-delete" data-id="${support.id}">×</button>
-            </div>
-        `).join('');
-
-        // Add delete handlers
-        list.querySelectorAll('.btn-icon-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                StorageManager.removeSupport(id);
-                UIRenderer.renderContactsList();
-                UIRenderer.renderSupports(StorageManager.getSupports());
-            });
-        });
-    }
-
-    static renderHistory() {
+    static async renderHistory(type = 'sent') {
         const list = document.getElementById('historyList');
-        const history = StorageManager.getHistory().reverse().slice(0, 10);
 
-        if (history.length === 0) {
-            list.innerHTML = '<p class="empty-state">No history yet</p>';
-            return;
-        }
-
+        let items = [];
         const moodLabels = {
             green: '🟢 Stable',
             orange: '🟡 Struggling',
             red: '🔴 Overwhelmed'
         };
 
-        list.innerHTML = history.map((entry, index) => {
-            const date = new Date(entry.timestamp).toLocaleString();
-            const historyIndex = StorageManager.getHistory().length - 1 - index;
-            return `
-                <div class="history-item" data-index="${historyIndex}">
-                    <div class="history-content">
-                        <div class="history-mood">${moodLabels[entry.mood]}</div>
-                        <div class="history-time">${date}</div>
-                        <div class="history-emojis">${entry.emojis.map(e => e.emoji).join(' ')}</div>
+        if (type === 'sent') {
+            // Show sent flares (from local history)
+            items = StorageManager.getHistory().reverse().slice(0, 20);
+
+            if (items.length === 0) {
+                list.innerHTML = '<p class="empty-state">No sent flares yet</p>';
+                return;
+            }
+
+            list.innerHTML = items.map((entry, index) => {
+                const date = new Date(entry.timestamp).toLocaleString();
+                const historyIndex = StorageManager.getHistory().length - 1 - index;
+                return `
+                    <div class="history-item" data-index="${historyIndex}">
+                        <div class="history-content">
+                            <div class="history-mood">${moodLabels[entry.mood]}</div>
+                            <div class="history-time">${date}</div>
+                            <div class="history-emojis">${entry.emojis.map(e => e.emoji).join(' ')}</div>
+                            ${entry.message ? `<div class="history-message">"${entry.message}"</div>` : ''}
+                        </div>
+                        <div class="history-actions">
+                            <button class="history-action-btn resend-btn" data-index="${historyIndex}" title="Resend">📤</button>
+                            <button class="history-action-btn edit-btn" data-index="${historyIndex}" title="Edit & Resend">✏️</button>
+                            <button class="history-action-btn delete-btn" data-index="${historyIndex}" title="Delete">🗑️</button>
+                        </div>
                     </div>
-                    <div class="history-actions">
-                        <button class="history-action-btn resend-btn" data-index="${historyIndex}" title="Resend">📤</button>
-                        <button class="history-action-btn edit-btn" data-index="${historyIndex}" title="Edit & Resend">✏️</button>
-                        <button class="history-action-btn delete-btn" data-index="${historyIndex}" title="Delete">🗑️</button>
+                `;
+            }).join('');
+
+            // Add event listeners for sent history actions
+            list.querySelectorAll('.resend-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    HistoryActions.resend(index);
+                });
+            });
+
+            list.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    HistoryActions.edit(index);
+                });
+            });
+
+            list.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    HistoryActions.delete(index);
+                });
+            });
+
+        } else if (type === 'received') {
+            // Show received flares (from inbox)
+            items = await InboxManager.fetchAllInboxItems();
+
+            if (items.length === 0) {
+                list.innerHTML = '<p class="empty-state">No received flares yet</p>';
+                return;
+            }
+
+            list.innerHTML = items.slice(0, 20).map(flare => {
+                const date = new Date(flare.createdAt || flare.timestamp).toLocaleString();
+                const moodLabel = {
+                    green: "I'm Okay",
+                    orange: "I'm Struggling",
+                    red: "I'm Overwhelmed"
+                }[flare.mood] || flare.mood;
+
+                return `
+                    <div class="history-item received ${flare.read ? '' : 'unread'}">
+                        <div class="history-content">
+                            <div class="history-sender">${flare.senderName || 'Someone'}</div>
+                            <div class="history-mood">${moodLabels[flare.mood]}</div>
+                            <div class="history-time">${date}</div>
+                            <div class="history-emojis">${flare.emojis ? flare.emojis.map(e => e.emoji).join(' ') : ''}</div>
+                            ${flare.message ? `<div class="history-message">"${flare.message}"</div>` : ''}
+                        </div>
+                        <div class="history-actions">
+                            ${!flare.read ? '<button class="history-action-btn mark-read-btn" data-id="' + flare.id + '" title="Mark Read">✓</button>' : ''}
+                            <button class="history-action-btn delete-received-btn" data-id="${flare.id}" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add event listeners for received history actions
+            list.querySelectorAll('.mark-read-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    await InboxManager.markAsRead(id);
+                    btn.remove();
+                    InboxManager.updateBadge();
+                });
+            });
+
+            list.querySelectorAll('.delete-received-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    if (confirm('Delete this received flare?')) {
+                        await InboxManager.deleteInboxItem(id);
+                        await UIRenderer.renderHistory('received');
+                        InboxManager.updateBadge();
+                    }
+                });
+            });
+        }
+    }
+
+    static openCustomizeModal(type, key, originalLabel, displayLabel, icon = null) {
+        const modal = document.getElementById('customizeLabelModal');
+        const previewIcon = document.getElementById('customizePreviewIcon');
+        const previewLabel = document.getElementById('customizePreviewLabel');
+        const input = document.getElementById('customLabelInput');
+
+        // Store current customization context
+        modal.dataset.type = type;
+        modal.dataset.key = key;
+        modal.dataset.originalLabel = originalLabel;
+
+        // Update preview
+        if (type === 'emoji') {
+            previewIcon.textContent = key; // key is the emoji character
+        } else {
+            previewIcon.textContent = icon || '⭐';
+        }
+        previewLabel.textContent = displayLabel;
+
+        // Set input value to current custom label (if any)
+        const customLabel = CustomLabelManager.getCustomLabel(type, key);
+        input.value = customLabel || '';
+        input.placeholder = `e.g., ${originalLabel}`;
+
+        // Show modal
+        modal.classList.add('active');
+    }
+
+    static updateEmojiSelectionBadge(count) {
+        const badge = document.getElementById('emojiSelectionBadge');
+        if (!badge) return;
+
+        if (count > 0) {
+            badge.textContent = `${count} selected`;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    static async renderContactsList() {
+        const section = document.getElementById('contactsSection');
+        const list = document.getElementById('contactsList');
+        const countEl = document.getElementById('contactsCount');
+        const sendBtn = document.getElementById('sendToLinked');
+
+        if (!AuthManager.currentUser) {
+            section.style.display = 'none';
+            if (sendBtn) sendBtn.style.display = 'none';
+            return;
+        }
+
+        const linkedContacts = await LinkingManager.getLinkedContacts();
+
+        if (linkedContacts.length === 0) {
+            section.style.display = 'none';
+            if (sendBtn) sendBtn.style.display = 'none';
+            return;
+        }
+
+        // Show section and send button
+        section.style.display = 'block';
+        if (sendBtn) sendBtn.style.display = 'block';
+
+        // Render contacts with toggles (all active by default)
+        list.innerHTML = linkedContacts.map(contact => `
+            <div class="contact-toggle-item" data-contact-id="${contact.id}">
+                <div class="contact-toggle-info">
+                    <div class="contact-toggle-avatar">${(contact.displayName || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="contact-toggle-details">
+                        <div class="contact-toggle-name">${contact.displayName || 'User'}</div>
+                        <div class="contact-toggle-email">${contact.email || ''}</div>
                     </div>
                 </div>
-            `;
-        }).join('');
+                <label class="toggle-switch">
+                    <input type="checkbox" class="linked-checkbox" data-id="${contact.id}" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        `).join('');
 
-        // Add event listeners for history actions
-        list.querySelectorAll('.resend-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const index = parseInt(btn.dataset.index);
-                HistoryActions.resend(index);
+        // Update count
+        this.updateContactsCount();
+
+        // Add event listeners to toggle switches
+        list.querySelectorAll('.linked-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const item = e.target.closest('.contact-toggle-item');
+                if (e.target.checked) {
+                    item.classList.remove('inactive');
+                } else {
+                    item.classList.add('inactive');
+                }
+                this.updateContactsCount();
             });
         });
+    }
 
-        list.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const index = parseInt(btn.dataset.index);
-                HistoryActions.edit(index);
-            });
-        });
+    static updateContactsCount() {
+        const countEl = document.getElementById('contactsCount');
+        const checkboxes = document.querySelectorAll('.linked-checkbox');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const total = checkboxes.length;
 
-        list.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const index = parseInt(btn.dataset.index);
-                HistoryActions.delete(index);
-            });
-        });
+        if (countEl) {
+            countEl.textContent = `${checked} of ${total} active`;
+        }
     }
 }
 
@@ -1717,6 +2627,7 @@ class HistoryActions {
             mood: entry.mood,
             emojis: [...entry.emojis],
             triggers: [...(entry.triggers || [])],
+            message: entry.message || '',
             timestamp: entry.timestamp,
             editingIndex: index // Mark that we're editing
         };
@@ -1794,6 +2705,23 @@ async function initApp() {
     // Initialize swipe gestures for navigation
     SwipeGestures.init();
 
+    // Load draft if exists
+    const hasDraft = appState.loadDraft();
+    if (hasDraft) {
+        // Show notification that draft was loaded
+        setTimeout(() => {
+            const draftMessage = document.createElement('div');
+            draftMessage.className = 'draft-notification';
+            draftMessage.innerHTML = '📝 Draft loaded - Continue where you left off';
+            document.body.appendChild(draftMessage);
+
+            setTimeout(() => {
+                draftMessage.classList.add('fade-out');
+                setTimeout(() => draftMessage.remove(), 500);
+            }, 3000);
+        }, 1000);
+    }
+
     // Mood Selection
     document.querySelectorAll('.flare-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1817,17 +2745,49 @@ async function initApp() {
         }
         UIRenderer.renderTriggers(appState.sessionData.mood);
         ScreenManager.showScreen('triggersScreen');
+
+        // Pre-select triggers if editing
+        if (appState.sessionData.triggers && appState.sessionData.triggers.length > 0) {
+            setTimeout(() => {
+                appState.sessionData.triggers.forEach(({ id }) => {
+                    const btn = document.querySelector(`.trigger-btn[data-trigger-id="${id}"]`);
+                    if (btn) btn.classList.add('selected');
+                });
+            }, 100);
+        }
     });
 
     document.getElementById('backToEmoji').addEventListener('click', () => {
         ScreenManager.showScreen('emojiScreen');
     });
 
-    document.getElementById('continueToPreview').addEventListener('click', () => {
+    document.getElementById('continueToPreview').addEventListener('click', async () => {
         UIRenderer.renderPreview(appState.sessionData);
-        UIRenderer.renderSupports(StorageManager.getSupports());
+
+        // Populate message field if editing
+        const messageInput = document.getElementById('flareMessage');
+        const charCount = document.getElementById('messageCharCount');
+        if (messageInput && appState.sessionData.message) {
+            messageInput.value = appState.sessionData.message;
+            if (charCount) charCount.textContent = appState.sessionData.message.length;
+        }
+
+        // Render contacts list with toggles
+        await UIRenderer.renderContactsList();
+
         ScreenManager.showScreen('previewScreen');
     });
+
+    // Message input handling
+    const flareMessageInput = document.getElementById('flareMessage');
+    const messageCharCount = document.getElementById('messageCharCount');
+    if (flareMessageInput) {
+        flareMessageInput.addEventListener('input', () => {
+            const length = flareMessageInput.value.length;
+            if (messageCharCount) messageCharCount.textContent = length;
+            appState.setMessage(flareMessageInput.value);
+        });
+    }
 
     document.getElementById('backToTriggers').addEventListener('click', () => {
         ScreenManager.showScreen('triggersScreen');
@@ -1848,44 +2808,27 @@ async function initApp() {
             await appState.save();
 
             // Send push notifications to selected linked contacts
-            await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
+            await LinkingManager.sendFlareToLinkedContacts(appState.sessionData, selectedLinked);
 
             Haptics.success();
             ScreenManager.showModal('successModal');
         });
     }
 
-    // Send notification via email
-    document.getElementById('sendNotification').addEventListener('click', async () => {
-        const selectedSupports = Array.from(document.querySelectorAll('.support-checkbox:checked'))
-            .map(cb => {
-                const id = parseInt(cb.dataset.id);
-                return StorageManager.getSupports().find(s => s.id === id);
-            });
-
-        if (selectedSupports.length === 0) {
-            alert('Please select at least one support contact or add contacts in settings');
-            return;
-        }
-
-        await appState.save();
-
-        // Send push notifications to linked contacts
-        await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
-
-        // Send email to selected supports
-        NotificationManager.sendViaEmail(appState.sessionData, selectedSupports);
-
-        Haptics.success();
-        ScreenManager.showModal('successModal');
-    });
+    // Send notification via email - REMOVED (redundant with Firebase push notifications)
 
     // Send notification via SMS
     document.getElementById('sendViaSMS').addEventListener('click', async () => {
+        // Get selected contacts
+        const selectedLinked = Array.from(document.querySelectorAll('.linked-checkbox:checked'))
+            .map(cb => cb.dataset.id);
+
         await appState.save();
 
-        // Send push notifications to linked contacts
-        await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
+        // Send push notifications to selected linked contacts only
+        if (selectedLinked.length > 0) {
+            await LinkingManager.sendFlareToLinkedContacts(appState.sessionData, selectedLinked);
+        }
 
         // Open SMS app
         NotificationManager.sendViaSMS(appState.sessionData);
@@ -1900,50 +2843,93 @@ async function initApp() {
         ScreenManager.showScreen('moodScreen');
     });
 
+    // Info button
+    document.getElementById('infoBtn').addEventListener('click', () => {
+        ScreenManager.showModal('infoModal');
+    });
+
+    document.getElementById('closeInfo').addEventListener('click', () => {
+        ScreenManager.hideModal('infoModal');
+    });
+
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => {
-        UIRenderer.renderContactsList();
         UIRenderer.renderHistory();
         ScreenManager.showModal('settingsModal');
     });
 
-    document.getElementById('manageSupportBtn').addEventListener('click', () => {
-        UIRenderer.renderContactsList();
-        UIRenderer.renderHistory();
-        ScreenManager.showModal('settingsModal');
+    // Inbox
+    document.getElementById('inboxBtn').addEventListener('click', async () => {
+        if (!AuthManager.currentUser) {
+            alert('Please sign in to view received flares');
+            return;
+        }
+        await InboxManager.renderInboxScreen();
+        ScreenManager.showScreen('inboxScreen');
     });
+
+    document.getElementById('backFromInbox').addEventListener('click', () => {
+        ScreenManager.showScreen('moodScreen');
+    });
+
+    document.getElementById('markAllReadBtn').addEventListener('click', async () => {
+        await InboxManager.markAllAsRead();
+    });
+
+    // Manage Support Contacts button - REMOVED (redundant with Firebase)
 
     document.getElementById('closeSettings').addEventListener('click', () => {
         ScreenManager.hideModal('settingsModal');
     });
 
-    // Add contact
-    document.getElementById('addContactBtn').addEventListener('click', () => {
-        const name = document.getElementById('contactName').value.trim();
-        const email = document.getElementById('contactEmail').value.trim();
+    // Add contact button - REMOVED (redundant with Firebase)
 
-        if (!name || !email) {
-            alert('Please enter both name and email');
-            return;
-        }
+    // History tabs
+    let currentHistoryTab = 'sent';
+    document.querySelectorAll('.history-tab').forEach(tab => {
+        tab.addEventListener('click', async () => {
+            const tabType = tab.dataset.tab;
+            currentHistoryTab = tabType;
 
-        if (!email.includes('@')) {
-            alert('Please enter a valid email address');
-            return;
-        }
+            // Update active state
+            document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
 
-        StorageManager.addSupport(name, email);
-        document.getElementById('contactName').value = '';
-        document.getElementById('contactEmail').value = '';
-        UIRenderer.renderContactsList();
-        UIRenderer.renderSupports(StorageManager.getSupports());
+            // Render appropriate history
+            await UIRenderer.renderHistory(tabType);
+        });
     });
 
-    // Clear history
-    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear your history?')) {
+    // Clear history - Clear Sent
+    document.getElementById('clearSentBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all sent flares?')) {
             StorageManager.clearHistory();
-            UIRenderer.renderHistory();
+            UIRenderer.renderHistory(currentHistoryTab);
+        }
+    });
+
+    // Clear history - Clear Received
+    document.getElementById('clearReceivedBtn').addEventListener('click', async () => {
+        if (!AuthManager.currentUser) {
+            alert('Please sign in to clear received flares');
+            return;
+        }
+        if (confirm('Are you sure you want to clear all received flares?')) {
+            await InboxManager.clearAllInbox();
+            await UIRenderer.renderHistory(currentHistoryTab);
+            InboxManager.updateBadge();
+        }
+    });
+
+    // Clear history - Clear All
+    document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to clear all your history (both sent and received)?')) {
+            StorageManager.clearHistory();
+            if (AuthManager.currentUser) {
+                await InboxManager.clearAllInbox();
+                InboxManager.updateBadge();
+            }
+            await UIRenderer.renderHistory(currentHistoryTab);
         }
     });
 
@@ -2060,6 +3046,63 @@ async function initApp() {
         renderCustomTriggersList();
     });
 
+    // Customize Label Modal Handlers
+    document.getElementById('closeCustomizeLabel').addEventListener('click', () => {
+        ScreenManager.hideModal('customizeLabelModal');
+    });
+
+    document.getElementById('cancelCustomizeLabel').addEventListener('click', () => {
+        ScreenManager.hideModal('customizeLabelModal');
+    });
+
+    document.getElementById('saveCustomLabel').addEventListener('click', () => {
+        const modal = document.getElementById('customizeLabelModal');
+        const input = document.getElementById('customLabelInput');
+        const type = modal.dataset.type;
+        const key = modal.dataset.key;
+        const customLabel = input.value.trim();
+
+        if (!customLabel) {
+            alert('Please enter a custom label');
+            return;
+        }
+
+        // Save the custom label
+        CustomLabelManager.setCustomLabel(type, key, customLabel);
+
+        // Re-render the appropriate screen to show the updated label
+        if (type === 'emoji') {
+            UIRenderer.renderEmojis(appState.sessionData.mood);
+        } else if (type === 'trigger') {
+            UIRenderer.renderTriggers(appState.sessionData.mood);
+        }
+
+        Haptics.success();
+        ScreenManager.hideModal('customizeLabelModal');
+    });
+
+    document.getElementById('resetCustomLabel').addEventListener('click', () => {
+        const modal = document.getElementById('customizeLabelModal');
+        const type = modal.dataset.type;
+        const key = modal.dataset.key;
+        const originalLabel = modal.dataset.originalLabel;
+
+        if (confirm(`Reset to default label: "${originalLabel}"?`)) {
+            // Reset the custom label
+            CustomLabelManager.resetCustomLabel(type, key);
+
+            // Re-render the appropriate screen to show the reset label
+            if (type === 'emoji') {
+                UIRenderer.renderEmojis(appState.sessionData.mood);
+            } else if (type === 'trigger') {
+                UIRenderer.renderTriggers(appState.sessionData.mood);
+            }
+
+            Haptics.success();
+            ScreenManager.hideModal('customizeLabelModal');
+        }
+    });
+
     // Close modals on outside click
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
@@ -2159,6 +3202,35 @@ function deleteCustomTrigger(id) {
 // Linking System Handlers
 // ============================================================================
 
+// QR Code Generation
+function generateQRCode(code) {
+    const qrDiv = document.getElementById('qrCodeDiv');
+    const container = document.getElementById('qrCodeContainer');
+
+    if (!qrDiv || !container) return;
+
+    // Clear previous QR code
+    qrDiv.innerHTML = '';
+
+    // Show container
+    container.style.display = 'flex';
+
+    try {
+        // Use QRCode library to generate QR code
+        new QRCode(qrDiv, {
+            text: code,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (error) {
+        console.error('Error generating QR code:', error);
+        container.style.display = 'none';
+    }
+}
+
 function setupLinkingHandlers() {
     // Generate link code
     const generateBtn = document.getElementById('generateLinkCodeBtn');
@@ -2167,6 +3239,9 @@ function setupLinkingHandlers() {
             try {
                 const { code, expiresAt } = await LinkingManager.createLinkCode();
                 document.querySelector('#linkCodeDisplay .link-code').textContent = code;
+
+                // Generate QR code
+                generateQRCode(code);
 
                 // Update expiry countdown
                 updateCodeExpiry(expiresAt);
@@ -2360,6 +3435,7 @@ function setupProfileHandlers() {
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', async () => {
             const displayName = document.getElementById('editDisplayName').value.trim();
+            const phoneNumber = document.getElementById('editPhone').value.trim();
             const errorEl = document.getElementById('profileEditError');
             const avatarFileInput = document.getElementById('avatarFileInput');
 
@@ -2375,6 +3451,9 @@ function setupProfileHandlers() {
             try {
                 // Update display name
                 await ProfileManager.updateDisplayName(displayName);
+
+                // Update phone number
+                await ProfileManager.updatePhoneNumber(phoneNumber);
 
                 // Handle avatar
                 const pendingAvatar = avatarFileInput?.dataset.pendingAvatar;
@@ -2403,6 +3482,25 @@ function setupProfileHandlers() {
             }
         });
     }
+
+    // Welcome modal handlers
+    const skipWelcome = document.getElementById('skipWelcome');
+    const setupProfileBtn = document.getElementById('setupProfile');
+
+    if (skipWelcome) {
+        skipWelcome.addEventListener('click', () => {
+            OnboardingManager.markWelcomeComplete();
+            ScreenManager.hideModal('welcomeModal');
+        });
+    }
+
+    if (setupProfileBtn) {
+        setupProfileBtn.addEventListener('click', () => {
+            OnboardingManager.markWelcomeComplete();
+            ScreenManager.hideModal('welcomeModal');
+            openEditProfileModal();
+        });
+    }
 }
 
 // Open edit profile modal and populate with current data
@@ -2422,6 +3520,12 @@ function openEditProfileModal() {
     const emailInput = document.getElementById('editEmail');
     if (emailInput) {
         emailInput.value = user.email || '';
+    }
+
+    // Set phone number
+    const phoneInput = document.getElementById('editPhone');
+    if (phoneInput) {
+        phoneInput.value = profile.phoneNumber || '';
     }
 
     // Set avatar
@@ -2529,7 +3633,12 @@ async function renderLinkedContactsList() {
         <div class="linked-contact-item">
             <div class="linked-contact-avatar">${(contact.displayName || 'U').charAt(0).toUpperCase()}</div>
             <div class="linked-contact-info">
-                <div class="linked-contact-name">${contact.displayName || 'User'}</div>
+                <div class="linked-contact-name">
+                    ${contact.displayName || 'User'}
+                    <span class="connection-type-icons">
+                        <span class="connection-icon" title="Push Notifications">🔔</span>
+                    </span>
+                </div>
                 <div class="linked-contact-email">${contact.email || ''}</div>
             </div>
             <button class="btn-icon-delete" onclick="unlinkContact('${contact.id}')">×</button>
@@ -2707,12 +3816,14 @@ function updateUIForAuthState(user) {
     const userAvatarImg = document.getElementById('userAvatarImg');
     const userName = document.getElementById('userName');
     const userEmail = document.getElementById('userEmail');
+    const inboxBtn = document.getElementById('inboxBtn');
 
     if (user) {
-        // Logged in - show profile and linked contacts
+        // Logged in - show profile, inbox, and linked contacts
         if (userProfileSection) userProfileSection.style.display = 'block';
         if (guestModeNotice) guestModeNotice.style.display = 'none';
         if (linkedContactsSection) linkedContactsSection.style.display = 'block';
+        if (inboxBtn) inboxBtn.style.display = 'flex';
 
         // Load profile from cloud and update UI
         ProfileManager.loadFromCloud().then(() => {
@@ -2746,11 +3857,15 @@ function updateUIForAuthState(user) {
         // Start listening for incoming flares and check for pending ones
         InboxManager.startListening();
         InboxManager.checkPendingFlares();
+
+        // Show welcome modal for new users
+        OnboardingManager.showWelcomeIfNeeded(user);
     } else if (AuthManager.isGuest) {
-        // Guest mode - show notice, hide linked contacts
+        // Guest mode - show notice, hide linked contacts and inbox
         if (userProfileSection) userProfileSection.style.display = 'none';
         if (guestModeNotice) guestModeNotice.style.display = 'block';
         if (linkedContactsSection) linkedContactsSection.style.display = 'none';
+        if (inboxBtn) inboxBtn.style.display = 'none';
 
         // Stop inbox listener for guest mode
         InboxManager.stopListening();
@@ -2759,6 +3874,7 @@ function updateUIForAuthState(user) {
         if (userProfileSection) userProfileSection.style.display = 'none';
         if (linkedContactsSection) linkedContactsSection.style.display = 'none';
         if (guestModeNotice) guestModeNotice.style.display = 'none';
+        if (inboxBtn) inboxBtn.style.display = 'none';
 
         // Stop inbox listener when logged out
         InboxManager.stopListening();
@@ -2774,7 +3890,25 @@ async function syncDataToCloud() {
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', () => {
+        // Hide splash screen after animation completes
+        setTimeout(() => {
+            const splash = document.getElementById('splashScreen');
+            if (splash) {
+                splash.classList.add('hidden');
+            }
+        }, 2500);
+
+        initApp();
+    });
 } else {
+    // Hide splash screen after animation completes
+    setTimeout(() => {
+        const splash = document.getElementById('splashScreen');
+        if (splash) {
+            splash.classList.add('hidden');
+        }
+    }, 2500);
+
     initApp();
 }
