@@ -1812,6 +1812,8 @@ class AppState {
     // Save session and sync with Firebase if authenticated
     async save() {
         const history = StorageManager.getHistory();
+        console.log('[AppState] Saving to history. Current history length:', history.length);
+        console.log('[AppState] Session data:', this.sessionData);
 
         // If editing, update the existing entry
         if (this.sessionData.editingIndex !== undefined) {
@@ -1819,14 +1821,17 @@ class AppState {
             const dataToSave = {...this.sessionData};
             delete dataToSave.editingIndex; // Remove the editing flag
             history[editIndex] = dataToSave;
+            console.log('[AppState] Updated existing entry at index:', editIndex);
         } else {
             // Otherwise, add new entry
             const dataToSave = {...this.sessionData};
             delete dataToSave.editingIndex; // Ensure no editing flag
             history.push(dataToSave);
+            console.log('[AppState] Added new entry. New history length:', history.length);
         }
 
         StorageManager.saveHistory(history);
+        console.log('[AppState] History saved to localStorage');
 
         // Sync to cloud if logged in
         if (!AuthManager.isGuestMode()) {
@@ -2521,7 +2526,10 @@ class UIRenderer {
 
         if (type === 'sent') {
             // Show sent flares (from local history)
-            items = StorageManager.getHistory().reverse().slice(0, 20);
+            const fullHistory = StorageManager.getHistory();
+            console.log('[renderHistory] Full history from storage:', fullHistory);
+            items = fullHistory.reverse().slice(0, 20);
+            console.log('[renderHistory] Rendering', items.length, 'sent items');
 
             if (items.length === 0) {
                 list.innerHTML = '<p class="empty-state">No sent flares yet</p>';
@@ -3034,6 +3042,36 @@ async function initApp() {
 
     document.getElementById('closeInfo').addEventListener('click', () => {
         ScreenManager.hideModal('infoModal');
+    });
+
+    // History button
+    document.getElementById('historyBtn').addEventListener('click', () => {
+        UIRenderer.renderHistory();
+        ScreenManager.showModal('settingsModal');
+        // Switch to the history view by clicking the appropriate tab
+        setTimeout(() => {
+            const historyTabContainer = document.querySelector('.settings-tabs');
+            if (historyTabContainer) {
+                const historySection = document.querySelector('.settings-section[data-section="history"]');
+                const allSections = document.querySelectorAll('.settings-section');
+                const allTabs = document.querySelectorAll('.settings-tab');
+
+                // Hide all sections
+                allSections.forEach(s => s.style.display = 'none');
+                // Remove active from all tabs
+                allTabs.forEach(t => t.classList.remove('active'));
+
+                // Show history section
+                if (historySection) {
+                    historySection.style.display = 'block';
+                }
+                // Activate history tab
+                const historyTab = document.querySelector('.settings-tab[data-tab="history"]');
+                if (historyTab) {
+                    historyTab.classList.add('active');
+                }
+            }
+        }, 50);
     });
 
     // Settings

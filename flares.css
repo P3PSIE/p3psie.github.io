@@ -374,11 +374,45 @@
     transform: scale(1.05);
 }
 
-/* Responsive info button for mobile */
+.history-btn {
+    position: fixed;
+    top: 1rem;
+    left: 5rem;
+    z-index: 1000;
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.history-btn:hover {
+    background: var(--bg-tertiary);
+    transform: scale(1.05);
+}
+
+/* Responsive info/history buttons for mobile */
 @media (max-width: 768px) {
     .info-btn {
         top: 0.75rem;
         left: 0.75rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.3rem;
+    }
+
+    .history-btn {
+        top: 0.75rem;
+        left: 4.25rem;
         width: 40px;
         height: 40px;
         font-size: 1.3rem;
