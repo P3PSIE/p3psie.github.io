@@ -1728,6 +1728,11 @@ class AppState {
     }
 
     setMood(mood) {
+        // Clear emojis and triggers when changing mood
+        if (this.sessionData.mood !== mood) {
+            this.sessionData.emojis = [];
+            this.sessionData.triggers = [];
+        }
         this.sessionData.mood = mood;
         this.sessionData.timestamp = new Date().toISOString();
         this.saveDraft();
@@ -2255,6 +2260,19 @@ class UIRenderer {
 
             grid.appendChild(btn);
         });
+
+        // Add "Add Custom Emoji" card at the end
+        const addCustomBtn = document.createElement('button');
+        addCustomBtn.className = 'emoji-btn add-custom-emoji-btn';
+        addCustomBtn.innerHTML = `
+            <span class="emoji-icon add-emoji-icon">➕</span>
+            <span class="emoji-label">Add Custom</span>
+        `;
+        addCustomBtn.addEventListener('click', () => {
+            Haptics.light(addCustomBtn);
+            ScreenManager.showModal('customEmojiModal');
+        });
+        grid.appendChild(addCustomBtn);
 
         // Initialize selection badge
         this.updateEmojiSelectionBadge(appState.sessionData.emojis.length);
@@ -3175,11 +3193,6 @@ async function initApp() {
     });
 
     // Navigation buttons
-    // Manage custom emojis from emoji screen
-    document.getElementById('manageEmojisFromScreen').addEventListener('click', () => {
-        ScreenManager.showModal('customEmojiModal');
-    });
-
     document.getElementById('backToMood').addEventListener('click', () => {
         ScreenManager.showScreen('moodScreen');
     });

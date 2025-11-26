@@ -336,15 +336,9 @@
     order: 1;
 }
 
-.screen-actions .btn-primary,
-.screen-actions .btn-tertiary {
+.screen-actions .btn-primary {
     /* Forward/action buttons - right side */
     order: 2;
-}
-
-.screen-actions .btn-tertiary {
-    order: 0;
-    margin-right: auto;
 }
 
 /* Flares (Mood Selection) */
@@ -567,6 +561,23 @@
 
 .emoji-btn.favorited .emoji-star-btn {
     opacity: 1;
+}
+
+/* Add Custom Emoji Button */
+.add-custom-emoji-btn {
+    border-style: dashed !important;
+    border-color: var(--text-secondary) !important;
+    opacity: 0.7;
+}
+
+.add-custom-emoji-btn:hover {
+    opacity: 1;
+    border-color: var(--text-primary) !important;
+}
+
+.add-emoji-icon {
+    font-size: 2rem;
+    opacity: 0.7;
 }
 
 /* Emoji Tooltip */
