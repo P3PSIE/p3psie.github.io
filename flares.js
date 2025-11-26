@@ -2270,7 +2270,7 @@ class UIRenderer {
         `;
         addCustomBtn.addEventListener('click', () => {
             Haptics.light(addCustomBtn);
-            ScreenManager.showModal('customEmojiModal');
+            ScreenManager.showModal('customEmojisModal');
         });
         grid.appendChild(addCustomBtn);
 
