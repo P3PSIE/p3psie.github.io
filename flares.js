@@ -2816,20 +2816,57 @@ class UIRenderer {
 
 // History Actions handler
 class HistoryActions {
-    static resend(index) {
+    static async resend(index) {
         const history = StorageManager.getHistory();
         const entry = history[index];
         if (!entry) return;
+
+        // Get linked contacts if logged in
+        let linkedContacts = [];
+        if (AuthManager.currentUser) {
+            linkedContacts = await LinkingManager.getLinkedContacts();
+        }
 
         // Send notifications again
         NotificationManager.sendNotifications(entry);
 
         // Notify linked contacts if logged in
         if (AuthManager.currentUser) {
-            LinkingManager.sendFlareToLinkedContacts(entry);
+            await LinkingManager.sendFlareToLinkedContacts(entry);
         }
 
-        alert('Flare resent successfully!');
+        // Show success feedback with contact list
+        this.showResendFeedback(linkedContacts);
+    }
+
+    static showResendFeedback(contacts) {
+        const toast = document.createElement('div');
+        toast.className = 'resend-toast';
+
+        const contactsList = contacts.length > 0
+            ? `<p class="resend-contacts">Sent to: ${contacts.map(c => c.displayName || c.email).join(', ')}</p>`
+            : '<p class="resend-contacts">No linked contacts</p>';
+
+        toast.innerHTML = `
+            <div class="resend-toast-content">
+                <div class="resend-toast-icon">✅</div>
+                <div class="resend-toast-text">
+                    <strong>Flare Resent Successfully!</strong>
+                    ${contactsList}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => toast.classList.add('show'), 10);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
     }
 
     static edit(index) {
