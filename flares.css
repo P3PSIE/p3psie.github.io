@@ -2988,6 +2988,10 @@ input.input:disabled {
 .history-actions {
     margin-top: 1rem;
     text-align: center;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .history-sender {

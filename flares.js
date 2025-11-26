@@ -1538,6 +1538,26 @@ class InboxManager {
         }
     }
 
+    // Clear all inbox items
+    static async clearAllInbox() {
+        if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
+            return;
+        }
+
+        try {
+            const items = await this.fetchAllInboxItems();
+
+            // Delete each item
+            for (const item of items) {
+                await this.deleteInboxItem(item.id);
+            }
+
+            console.log(`Cleared ${items.length} inbox items`);
+        } catch (error) {
+            console.error('Error clearing inbox:', error);
+        }
+    }
+
     // Mark all inbox items as read
     static async markAllAsRead() {
         console.log('markAllAsRead called');
@@ -2798,11 +2818,36 @@ async function initApp() {
         });
     });
 
-    // Clear history
-    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear all your history?')) {
+    // Clear history - Clear Sent
+    document.getElementById('clearSentBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all sent flares?')) {
             StorageManager.clearHistory();
             UIRenderer.renderHistory(currentHistoryTab);
+        }
+    });
+
+    // Clear history - Clear Received
+    document.getElementById('clearReceivedBtn').addEventListener('click', async () => {
+        if (!AuthManager.currentUser) {
+            alert('Please sign in to clear received flares');
+            return;
+        }
+        if (confirm('Are you sure you want to clear all received flares?')) {
+            await InboxManager.clearAllInbox();
+            await UIRenderer.renderHistory(currentHistoryTab);
+            InboxManager.updateBadge();
+        }
+    });
+
+    // Clear history - Clear All
+    document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to clear all your history (both sent and received)?')) {
+            StorageManager.clearHistory();
+            if (AuthManager.currentUser) {
+                await InboxManager.clearAllInbox();
+                InboxManager.updateBadge();
+            }
+            await UIRenderer.renderHistory(currentHistoryTab);
         }
     });
 
