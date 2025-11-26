@@ -24,7 +24,7 @@ This document tracks features present in the iOS app that are missing or incompl
 | [x] | **Favorite/Star Emojis** | ✅ Complete! Star emojis to sort them to the top for quick access. |
 | [x] | **Favorite/Star Triggers** | ✅ Complete! Star triggers to appear at top of their categories. |
 | [x] | **Draft Persistence** | ✅ Complete! Auto-saves partial flare selections when navigating between screens. |
-| [~] | **Tutorial/Info Overlays** | ⚠️ Partial! Info button added with about modal, but no full tutorial overlays. |
+| [x] | **Tutorial/Info Overlays** | ✅ Complete! Comprehensive help system with step-by-step guide and pro tips. |
 | [x] | **Selection Count Badges** | ✅ Complete! Shows "X selected" on emoji screen. |
 | [x] | **Active/Inactive Contact Toggles** | ✅ Complete! Toggle switches for individual contacts. |
 | [x] | **Contact Activation Count** | ✅ Complete! Shows "X of Y active" in send preview. |
