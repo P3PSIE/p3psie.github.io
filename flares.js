@@ -654,6 +654,67 @@ class CloudStorageManager {
 // Profile Manager
 // ============================================================================
 
+// ============================================================================
+// Onboarding Manager
+// ============================================================================
+
+class OnboardingManager {
+    static STORAGE_KEY = 'flares_onboarding';
+
+    // Check if user has completed welcome flow
+    static hasCompletedWelcome() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        if (!data) return false;
+
+        const onboarding = JSON.parse(data);
+        return onboarding.welcomeComplete === true;
+    }
+
+    // Mark welcome as complete
+    static markWelcomeComplete() {
+        const onboarding = this.getOnboardingData();
+        onboarding.welcomeComplete = true;
+        onboarding.welcomeCompletedAt = new Date().toISOString();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(onboarding));
+    }
+
+    // Get onboarding data
+    static getOnboardingData() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : { welcomeComplete: false };
+    }
+
+    // Check if should show welcome modal
+    static shouldShowWelcome(user) {
+        if (!user) return false;
+        if (this.hasCompletedWelcome()) return false;
+
+        // Check if user is new (created within last 24 hours)
+        const userCreatedAt = user.metadata?.creationTime;
+        if (!userCreatedAt) return true; // Default to showing for users without creation time
+
+        const createdDate = new Date(userCreatedAt);
+        const now = new Date();
+        const hoursSinceCreation = (now - createdDate) / (1000 * 60 * 60);
+
+        // Show welcome if user created account in last 24 hours
+        return hoursSinceCreation < 24;
+    }
+
+    // Show welcome modal if appropriate
+    static showWelcomeIfNeeded(user) {
+        if (this.shouldShowWelcome(user)) {
+            setTimeout(() => {
+                ScreenManager.showModal('welcomeModal');
+            }, 500); // Small delay for better UX
+        }
+    }
+}
+
+// ============================================================================
+// Profile Manager
+// ============================================================================
+
 class ProfileManager {
     static STORAGE_KEY = 'flares_profile';
 
@@ -3421,6 +3482,25 @@ function setupProfileHandlers() {
             }
         });
     }
+
+    // Welcome modal handlers
+    const skipWelcome = document.getElementById('skipWelcome');
+    const setupProfileBtn = document.getElementById('setupProfile');
+
+    if (skipWelcome) {
+        skipWelcome.addEventListener('click', () => {
+            OnboardingManager.markWelcomeComplete();
+            ScreenManager.hideModal('welcomeModal');
+        });
+    }
+
+    if (setupProfileBtn) {
+        setupProfileBtn.addEventListener('click', () => {
+            OnboardingManager.markWelcomeComplete();
+            ScreenManager.hideModal('welcomeModal');
+            openEditProfileModal();
+        });
+    }
 }
 
 // Open edit profile modal and populate with current data
@@ -3777,6 +3857,9 @@ function updateUIForAuthState(user) {
         // Start listening for incoming flares and check for pending ones
         InboxManager.startListening();
         InboxManager.checkPendingFlares();
+
+        // Show welcome modal for new users
+        OnboardingManager.showWelcomeIfNeeded(user);
     } else if (AuthManager.isGuest) {
         // Guest mode - show notice, hide linked contacts and inbox
         if (userProfileSection) userProfileSection.style.display = 'none';

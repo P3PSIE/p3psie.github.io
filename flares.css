@@ -899,6 +899,113 @@ body:has(#moodScreen.active) .flares-nav {
     padding: 3rem;
 }
 
+.modal-content.modal-large {
+    max-width: 700px;
+}
+
+/* Welcome/Onboarding Modal */
+.welcome-content {
+    padding: 0.5rem 0;
+}
+
+.welcome-intro {
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+    text-align: center;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.onboarding-steps {
+    margin: 2rem 0;
+}
+
+.onboarding-step {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-start;
+}
+
+.step-number {
+    background: var(--mood-green);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-lg);
+    flex-shrink: 0;
+}
+
+.step-content h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+}
+
+.step-content p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.mood-preview {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
+
+.mood-preview h4 {
+    margin: 0 0 1rem 0;
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+}
+
+.mood-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mood-example {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-primary);
+}
+
+.mood-example-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .modal-content.modal-large {
+        max-width: 95%;
+    }
+
+    .welcome-intro {
+        font-size: var(--font-size-base);
+    }
+
+    .step-number {
+        width: 32px;
+        height: 32px;
+        font-size: var(--font-size-base);
+    }
+
+    .mood-example-icon {
+        width: 28px;
+        height: 28px;
+    }
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;

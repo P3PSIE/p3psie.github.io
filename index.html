@@ -663,6 +663,72 @@
                 </div>
             </div>
         </div>
+
+        <!-- Welcome/Onboarding Modal -->
+        <div class="modal" id="welcomeModal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>Welcome to Flares! 🎉</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="welcome-content">
+                        <p class="welcome-intro">
+                            Flares helps you quickly communicate how you're feeling to your support network.
+                            Let's get you set up in just a few steps.
+                        </p>
+
+                        <div class="onboarding-steps">
+                            <div class="onboarding-step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h3>Set up your profile</h3>
+                                    <p>Add your name and photo so contacts recognize you</p>
+                                </div>
+                            </div>
+
+                            <div class="onboarding-step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h3>Link with your support network</h3>
+                                    <p>Connect with friends, family, or therapists who want to support you</p>
+                                </div>
+                            </div>
+
+                            <div class="onboarding-step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h3>Send a flare when you need support</h3>
+                                    <p>Choose your mood, select emojis and triggers, and send to your contacts</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mood-preview">
+                            <h4>How Flares Work:</h4>
+                            <div class="mood-examples">
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-green.png" alt="Green flare" class="mood-example-icon">
+                                    <span>I'm Okay - Stable and doing well</span>
+                                </div>
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-orange.png" alt="Orange flare" class="mood-example-icon">
+                                    <span>I'm Struggling - Starting to have difficulty</span>
+                                </div>
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-red.png" alt="Red flare" class="mood-example-icon">
+                                    <span>I'm Overwhelmed - Need support now</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="skipWelcome">Skip for Now</button>
+                        <button class="btn btn-primary" id="setupProfile">Set Up Profile</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="flares.js"></script>
