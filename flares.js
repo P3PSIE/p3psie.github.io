@@ -304,6 +304,108 @@ class CustomTriggerManager {
 }
 
 // ============================================================================
+// Favorite Manager
+// ============================================================================
+
+class FavoriteManager {
+    static STORAGE_KEY = 'flares_favorites';
+
+    static getFavorites() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : { emojis: [], triggers: [] };
+    }
+
+    static saveFavorites(favorites) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(favorites));
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
+    }
+
+    static toggleEmojiFavorite(emoji) {
+        const favorites = this.getFavorites();
+        const index = favorites.emojis.indexOf(emoji);
+
+        if (index > -1) {
+            favorites.emojis.splice(index, 1);
+        } else {
+            favorites.emojis.push(emoji);
+        }
+
+        this.saveFavorites(favorites);
+        return index === -1; // Return true if now favorited
+    }
+
+    static toggleTriggerFavorite(triggerId) {
+        const favorites = this.getFavorites();
+        const index = favorites.triggers.indexOf(triggerId);
+
+        if (index > -1) {
+            favorites.triggers.splice(index, 1);
+        } else {
+            favorites.triggers.push(triggerId);
+        }
+
+        this.saveFavorites(favorites);
+        return index === -1; // Return true if now favorited
+    }
+
+    static isEmojiFavorite(emoji) {
+        const favorites = this.getFavorites();
+        return favorites.emojis.includes(emoji);
+    }
+
+    static isTriggerFavorite(triggerId) {
+        const favorites = this.getFavorites();
+        return favorites.triggers.includes(triggerId);
+    }
+}
+
+// ============================================================================
+// Custom Label Manager
+// ============================================================================
+
+class CustomLabelManager {
+    static STORAGE_KEY = 'flares_custom_labels';
+
+    static getCustomLabels() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : {};
+    }
+
+    static saveCustomLabels(labels) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(labels));
+    }
+
+    static setCustomLabel(type, key, customLabel) {
+        // type: 'emoji' or 'trigger'
+        // key: emoji character (for emojis) or trigger id (for triggers)
+        const labels = this.getCustomLabels();
+        if (!labels[type]) {
+            labels[type] = {};
+        }
+        labels[type][key] = customLabel;
+        this.saveCustomLabels(labels);
+        // Sync to cloud
+        CloudStorageManager.syncToCloud();
+    }
+
+    static getCustomLabel(type, key) {
+        const labels = this.getCustomLabels();
+        return labels[type] && labels[type][key] ? labels[type][key] : null;
+    }
+
+    static resetCustomLabel(type, key) {
+        const labels = this.getCustomLabels();
+        if (labels[type] && labels[type][key]) {
+            delete labels[type][key];
+            this.saveCustomLabels(labels);
+            // Sync to cloud
+            CloudStorageManager.syncToCloud();
+        }
+    }
+}
+
+// ============================================================================
 // Authentication Manager (Firebase)
 // ============================================================================
 
@@ -467,12 +569,14 @@ class CloudStorageManager {
             const localHistory = StorageManager.getHistory();
             const localCustomEmojis = CustomEmojiManager.getCustomEmojis();
             const localCustomTriggers = CustomTriggerManager.getCustomTriggers();
+            const localCustomLabels = CustomLabelManager.getCustomLabels();
 
             await setDoc(userDocRef, {
                 supports: localSupports,
                 history: localHistory,
                 customEmojis: localCustomEmojis,
                 customTriggers: localCustomTriggers,
+                customLabels: localCustomLabels,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             });
@@ -495,6 +599,7 @@ class CloudStorageManager {
                 if (data.history) StorageManager.saveHistory(data.history);
                 if (data.customEmojis) CustomEmojiManager.saveCustomEmojis(data.customEmojis);
                 if (data.customTriggers) CustomTriggerManager.saveCustomTriggers(data.customTriggers);
+                if (data.customLabels) CustomLabelManager.saveCustomLabels(data.customLabels);
 
                 console.log('Data synced from cloud');
             }
@@ -515,6 +620,7 @@ class CloudStorageManager {
                 history: StorageManager.getHistory(),
                 customEmojis: CustomEmojiManager.getCustomEmojis(),
                 customTriggers: CustomTriggerManager.getCustomTriggers(),
+                customLabels: CustomLabelManager.getCustomLabels(),
                 updatedAt: new Date().toISOString()
             }, { merge: true });
 
@@ -915,13 +1021,18 @@ class LinkingManager {
     }
 
     // Send a Flare notification to all linked contacts
-    static async sendFlareToLinkedContacts(sessionData) {
+    static async sendFlareToLinkedContacts(sessionData, selectedContactIds = null) {
         if (!AuthManager.currentUser || !window.firebaseDb || !window.firebaseDbFunctions) {
             return;
         }
 
         const { collection, addDoc } = window.firebaseDbFunctions;
-        const linkedContacts = await this.getLinkedContacts();
+        let linkedContacts = await this.getLinkedContacts();
+
+        // Filter to only selected contacts if specified
+        if (selectedContactIds && selectedContactIds.length > 0) {
+            linkedContacts = linkedContacts.filter(c => selectedContactIds.includes(c.id));
+        }
 
         if (linkedContacts.length === 0) {
             console.log('No linked contacts to notify');
@@ -1509,10 +1620,12 @@ class AppState {
     setMood(mood) {
         this.sessionData.mood = mood;
         this.sessionData.timestamp = new Date().toISOString();
+        this.saveDraft();
     }
 
     setMessage(message) {
         this.sessionData.message = message.trim().substring(0, 200);
+        this.saveDraft();
     }
 
     toggleEmoji(emoji, label) {
@@ -1522,6 +1635,9 @@ class AppState {
         } else {
             this.sessionData.emojis.push({ emoji, label });
         }
+        // Update selection count badge
+        UIRenderer.updateEmojiSelectionBadge(this.sessionData.emojis.length);
+        this.saveDraft();
     }
 
     toggleTrigger(id, label, icon) {
@@ -1531,6 +1647,7 @@ class AppState {
         } else {
             this.sessionData.triggers.push({ id, label, icon });
         }
+        this.saveDraft();
     }
 
     reset() {
@@ -1546,6 +1663,40 @@ class AppState {
         if (messageInput) messageInput.value = '';
         const charCount = document.getElementById('messageCharCount');
         if (charCount) charCount.textContent = '0';
+        // Clear draft
+        this.clearDraft();
+    }
+
+    // Draft persistence methods
+    saveDraft() {
+        // Don't save draft if we're editing an existing entry
+        if (this.sessionData.editingIndex !== undefined) return;
+
+        // Only save if there's some progress (mood selected or emojis/triggers added)
+        if (this.sessionData.mood || this.sessionData.emojis.length > 0 || this.sessionData.triggers.length > 0) {
+            localStorage.setItem('flares_draft', JSON.stringify(this.sessionData));
+        }
+    }
+
+    loadDraft() {
+        const draft = localStorage.getItem('flares_draft');
+        if (draft) {
+            try {
+                const draftData = JSON.parse(draft);
+                // Only load draft if it has meaningful content
+                if (draftData.mood || draftData.emojis?.length > 0 || draftData.triggers?.length > 0) {
+                    this.sessionData = draftData;
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error loading draft:', error);
+            }
+        }
+        return false;
+    }
+
+    clearDraft() {
+        localStorage.removeItem('flares_draft');
     }
 
     // Save session and sync with Firebase if authenticated
@@ -1571,6 +1722,9 @@ class AppState {
         if (!AuthManager.isGuestMode()) {
             await CloudStorageManager.addHistoryEntry(this.sessionData);
         }
+
+        // Clear draft after successful save
+        this.clearDraft();
     }
 }
 
@@ -1743,22 +1897,99 @@ class UIRenderer {
         const customEmojis = CustomEmojiManager.getEmojisForMood(mood);
         const allEmojis = [...defaultEmojis, ...customEmojis];
 
+        // Sort emojis: favorites first, then alphabetical
+        allEmojis.sort((a, b) => {
+            const aFav = FavoriteManager.isEmojiFavorite(a.emoji);
+            const bFav = FavoriteManager.isEmojiFavorite(b.emoji);
+
+            if (aFav && !bFav) return -1;
+            if (!aFav && bFav) return 1;
+            return a.label.localeCompare(b.label);
+        });
+
         allEmojis.forEach(({ emoji, label }) => {
+            // Check for custom label
+            const customLabel = CustomLabelManager.getCustomLabel('emoji', emoji);
+            const displayLabel = customLabel || label;
+            const isFavorite = FavoriteManager.isEmojiFavorite(emoji);
+
             const btn = document.createElement('button');
             btn.className = 'emoji-btn';
+            if (isFavorite) {
+                btn.classList.add('favorited');
+            }
             btn.dataset.emoji = emoji;
             btn.dataset.label = label;
+            btn.dataset.originalLabel = label;
             btn.innerHTML = `
+                <button class="emoji-star-btn" data-emoji="${emoji}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                    ${isFavorite ? '★' : '☆'}
+                </button>
                 <span class="emoji-icon">${emoji}</span>
-                <span class="emoji-label">${label}</span>
+                <span class="emoji-label">${displayLabel}</span>
             `;
+
+            // Star button handler
+            const starBtn = btn.querySelector('.emoji-star-btn');
+            starBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent emoji selection
+                Haptics.light(starBtn);
+                const nowFavorited = FavoriteManager.toggleEmojiFavorite(emoji);
+                starBtn.textContent = nowFavorited ? '★' : '☆';
+                starBtn.title = nowFavorited ? 'Remove from favorites' : 'Add to favorites';
+                btn.classList.toggle('favorited', nowFavorited);
+
+                // Re-render to update sort order
+                this.renderEmojis(mood);
+            });
+
+            // Click handler
             btn.addEventListener('click', () => {
                 Haptics.light(btn);
                 btn.classList.toggle('selected');
-                appState.toggleEmoji(emoji, label);
+                appState.toggleEmoji(emoji, displayLabel);
             });
+
+            // Long-press handler
+            let pressTimer;
+            btn.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('emoji-star-btn')) return;
+                pressTimer = setTimeout(() => {
+                    Haptics.medium(btn);
+                    this.openCustomizeModal('emoji', emoji, label, displayLabel);
+                }, 500);
+            });
+
+            btn.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+
+            btn.addEventListener('touchmove', () => {
+                clearTimeout(pressTimer);
+            });
+
+            // Mouse long-press for desktop
+            btn.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('emoji-star-btn')) return;
+                pressTimer = setTimeout(() => {
+                    Haptics.medium(btn);
+                    this.openCustomizeModal('emoji', emoji, label, displayLabel);
+                }, 500);
+            });
+
+            btn.addEventListener('mouseup', () => {
+                clearTimeout(pressTimer);
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                clearTimeout(pressTimer);
+            });
+
             grid.appendChild(btn);
         });
+
+        // Initialize selection badge
+        this.updateEmojiSelectionBadge(appState.sessionData.emojis.length);
     }
 
     static renderTriggers(mood) {
@@ -1798,22 +2029,96 @@ class UIRenderer {
             const grid = document.createElement('div');
             grid.className = 'trigger-category-grid';
 
+            // Sort triggers: favorites first, then alphabetical
+            const sortedTriggers = [...triggers].sort((a, b) => {
+                const aFav = FavoriteManager.isTriggerFavorite(a.id);
+                const bFav = FavoriteManager.isTriggerFavorite(b.id);
+
+                if (aFav && !bFav) return -1;
+                if (!aFav && bFav) return 1;
+                return a.label.localeCompare(b.label);
+            });
+
             // Add triggers to grid
-            triggers.forEach(({ id, label, icon }) => {
+            sortedTriggers.forEach(({ id, label, icon }) => {
+                // Check for custom label
+                const customLabel = CustomLabelManager.getCustomLabel('trigger', id);
+                const displayLabel = customLabel || label;
+                const isFavorite = FavoriteManager.isTriggerFavorite(id);
+
                 const btn = document.createElement('button');
                 btn.className = 'trigger-btn';
+                if (isFavorite) {
+                    btn.classList.add('favorited');
+                }
                 btn.dataset.triggerId = id;
                 btn.dataset.category = categoryId;
+                btn.dataset.originalLabel = label;
                 btn.innerHTML = `
+                    <button class="trigger-star-btn" data-trigger-id="${id}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        ${isFavorite ? '★' : '☆'}
+                    </button>
                     <span class="trigger-icon">${icon}</span>
-                    <span class="trigger-label">${label}</span>
+                    <span class="trigger-label">${displayLabel}</span>
                 `;
+
+                // Star button handler
+                const starBtn = btn.querySelector('.trigger-star-btn');
+                starBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    Haptics.light(starBtn);
+                    const nowFavorited = FavoriteManager.toggleTriggerFavorite(id);
+                    starBtn.textContent = nowFavorited ? '★' : '☆';
+                    starBtn.title = nowFavorited ? 'Remove from favorites' : 'Add to favorites';
+                    btn.classList.toggle('favorited', nowFavorited);
+
+                    // Re-render to update sort order
+                    this.renderTriggers(mood);
+                });
+
+                // Click handler
                 btn.addEventListener('click', () => {
                     Haptics.light(btn);
                     btn.classList.toggle('selected');
-                    appState.toggleTrigger(id, label, icon);
+                    appState.toggleTrigger(id, displayLabel, icon);
                     this.updateCategoryCount(categoryId);
                 });
+
+                // Long-press handler
+                let pressTimer;
+                btn.addEventListener('touchstart', (e) => {
+                    if (e.target.classList.contains('trigger-star-btn')) return;
+                    pressTimer = setTimeout(() => {
+                        Haptics.medium(btn);
+                        this.openCustomizeModal('trigger', id, label, displayLabel, icon);
+                    }, 500);
+                });
+
+                btn.addEventListener('touchend', () => {
+                    clearTimeout(pressTimer);
+                });
+
+                btn.addEventListener('touchmove', () => {
+                    clearTimeout(pressTimer);
+                });
+
+                // Mouse long-press for desktop
+                btn.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('trigger-star-btn')) return;
+                    pressTimer = setTimeout(() => {
+                        Haptics.medium(btn);
+                        this.openCustomizeModal('trigger', id, label, displayLabel, icon);
+                    }, 500);
+                });
+
+                btn.addEventListener('mouseup', () => {
+                    clearTimeout(pressTimer);
+                });
+
+                btn.addEventListener('mouseleave', () => {
+                    clearTimeout(pressTimer);
+                });
+
                 grid.appendChild(btn);
             });
 
@@ -1845,15 +2150,48 @@ class UIRenderer {
             const grid = document.createElement('div');
             grid.className = 'trigger-category-grid';
 
-            customTriggers.forEach(({ id, label, icon }) => {
+            // Sort custom triggers: favorites first, then alphabetical
+            const sortedCustomTriggers = [...customTriggers].sort((a, b) => {
+                const aFav = FavoriteManager.isTriggerFavorite(a.id);
+                const bFav = FavoriteManager.isTriggerFavorite(b.id);
+
+                if (aFav && !bFav) return -1;
+                if (!aFav && bFav) return 1;
+                return a.label.localeCompare(b.label);
+            });
+
+            sortedCustomTriggers.forEach(({ id, label, icon }) => {
+                const isFavorite = FavoriteManager.isTriggerFavorite(id);
+
                 const btn = document.createElement('button');
                 btn.className = 'trigger-btn';
+                if (isFavorite) {
+                    btn.classList.add('favorited');
+                }
                 btn.dataset.triggerId = id;
                 btn.dataset.category = 'custom';
                 btn.innerHTML = `
+                    <button class="trigger-star-btn" data-trigger-id="${id}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        ${isFavorite ? '★' : '☆'}
+                    </button>
                     <span class="trigger-icon">${icon}</span>
                     <span class="trigger-label">${label}</span>
                 `;
+
+                // Star button handler
+                const starBtn = btn.querySelector('.trigger-star-btn');
+                starBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    Haptics.light(starBtn);
+                    const nowFavorited = FavoriteManager.toggleTriggerFavorite(id);
+                    starBtn.textContent = nowFavorited ? '★' : '☆';
+                    starBtn.title = nowFavorited ? 'Remove from favorites' : 'Add to favorites';
+                    btn.classList.toggle('favorited', nowFavorited);
+
+                    // Re-render to update sort order
+                    this.renderTriggers(mood);
+                });
+
                 btn.addEventListener('click', () => {
                     Haptics.light(btn);
                     btn.classList.toggle('selected');
@@ -2048,6 +2386,115 @@ class UIRenderer {
             });
         }
     }
+
+    static openCustomizeModal(type, key, originalLabel, displayLabel, icon = null) {
+        const modal = document.getElementById('customizeLabelModal');
+        const previewIcon = document.getElementById('customizePreviewIcon');
+        const previewLabel = document.getElementById('customizePreviewLabel');
+        const input = document.getElementById('customLabelInput');
+
+        // Store current customization context
+        modal.dataset.type = type;
+        modal.dataset.key = key;
+        modal.dataset.originalLabel = originalLabel;
+
+        // Update preview
+        if (type === 'emoji') {
+            previewIcon.textContent = key; // key is the emoji character
+        } else {
+            previewIcon.textContent = icon || '⭐';
+        }
+        previewLabel.textContent = displayLabel;
+
+        // Set input value to current custom label (if any)
+        const customLabel = CustomLabelManager.getCustomLabel(type, key);
+        input.value = customLabel || '';
+        input.placeholder = `e.g., ${originalLabel}`;
+
+        // Show modal
+        modal.classList.add('active');
+    }
+
+    static updateEmojiSelectionBadge(count) {
+        const badge = document.getElementById('emojiSelectionBadge');
+        if (!badge) return;
+
+        if (count > 0) {
+            badge.textContent = `${count} selected`;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    static async renderContactsList() {
+        const section = document.getElementById('contactsSection');
+        const list = document.getElementById('contactsList');
+        const countEl = document.getElementById('contactsCount');
+        const sendBtn = document.getElementById('sendToLinked');
+
+        if (!AuthManager.currentUser) {
+            section.style.display = 'none';
+            if (sendBtn) sendBtn.style.display = 'none';
+            return;
+        }
+
+        const linkedContacts = await LinkingManager.getLinkedContacts();
+
+        if (linkedContacts.length === 0) {
+            section.style.display = 'none';
+            if (sendBtn) sendBtn.style.display = 'none';
+            return;
+        }
+
+        // Show section and send button
+        section.style.display = 'block';
+        if (sendBtn) sendBtn.style.display = 'block';
+
+        // Render contacts with toggles (all active by default)
+        list.innerHTML = linkedContacts.map(contact => `
+            <div class="contact-toggle-item" data-contact-id="${contact.id}">
+                <div class="contact-toggle-info">
+                    <div class="contact-toggle-avatar">${(contact.displayName || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="contact-toggle-details">
+                        <div class="contact-toggle-name">${contact.displayName || 'User'}</div>
+                        <div class="contact-toggle-email">${contact.email || ''}</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" class="linked-checkbox" data-id="${contact.id}" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        `).join('');
+
+        // Update count
+        this.updateContactsCount();
+
+        // Add event listeners to toggle switches
+        list.querySelectorAll('.linked-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const item = e.target.closest('.contact-toggle-item');
+                if (e.target.checked) {
+                    item.classList.remove('inactive');
+                } else {
+                    item.classList.add('inactive');
+                }
+                this.updateContactsCount();
+            });
+        });
+    }
+
+    static updateContactsCount() {
+        const countEl = document.getElementById('contactsCount');
+        const checkboxes = document.querySelectorAll('.linked-checkbox');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const total = checkboxes.length;
+
+        if (countEl) {
+            countEl.textContent = `${checked} of ${total} active`;
+        }
+    }
 }
 
 // History Actions handler
@@ -2156,6 +2603,23 @@ async function initApp() {
     // Initialize swipe gestures for navigation
     SwipeGestures.init();
 
+    // Load draft if exists
+    const hasDraft = appState.loadDraft();
+    if (hasDraft) {
+        // Show notification that draft was loaded
+        setTimeout(() => {
+            const draftMessage = document.createElement('div');
+            draftMessage.className = 'draft-notification';
+            draftMessage.innerHTML = '📝 Draft loaded - Continue where you left off';
+            document.body.appendChild(draftMessage);
+
+            setTimeout(() => {
+                draftMessage.classList.add('fade-out');
+                setTimeout(() => draftMessage.remove(), 500);
+            }, 3000);
+        }, 1000);
+    }
+
     // Mood Selection
     document.querySelectorAll('.flare-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -2195,7 +2659,7 @@ async function initApp() {
         ScreenManager.showScreen('emojiScreen');
     });
 
-    document.getElementById('continueToPreview').addEventListener('click', () => {
+    document.getElementById('continueToPreview').addEventListener('click', async () => {
         UIRenderer.renderPreview(appState.sessionData);
 
         // Populate message field if editing
@@ -2205,6 +2669,9 @@ async function initApp() {
             messageInput.value = appState.sessionData.message;
             if (charCount) charCount.textContent = appState.sessionData.message.length;
         }
+
+        // Render contacts list with toggles
+        await UIRenderer.renderContactsList();
 
         ScreenManager.showScreen('previewScreen');
     });
@@ -2239,7 +2706,7 @@ async function initApp() {
             await appState.save();
 
             // Send push notifications to selected linked contacts
-            await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
+            await LinkingManager.sendFlareToLinkedContacts(appState.sessionData, selectedLinked);
 
             Haptics.success();
             ScreenManager.showModal('successModal');
@@ -2250,10 +2717,16 @@ async function initApp() {
 
     // Send notification via SMS
     document.getElementById('sendViaSMS').addEventListener('click', async () => {
+        // Get selected contacts
+        const selectedLinked = Array.from(document.querySelectorAll('.linked-checkbox:checked'))
+            .map(cb => cb.dataset.id);
+
         await appState.save();
 
-        // Send push notifications to linked contacts
-        await LinkingManager.sendFlareToLinkedContacts(appState.sessionData);
+        // Send push notifications to selected linked contacts only
+        if (selectedLinked.length > 0) {
+            await LinkingManager.sendFlareToLinkedContacts(appState.sessionData, selectedLinked);
+        }
 
         // Open SMS app
         NotificationManager.sendViaSMS(appState.sessionData);
@@ -2266,6 +2739,15 @@ async function initApp() {
         ScreenManager.hideModal('successModal');
         appState.reset();
         ScreenManager.showScreen('moodScreen');
+    });
+
+    // Info button
+    document.getElementById('infoBtn').addEventListener('click', () => {
+        ScreenManager.showModal('infoModal');
+    });
+
+    document.getElementById('closeInfo').addEventListener('click', () => {
+        ScreenManager.hideModal('infoModal');
     });
 
     // Settings
@@ -2435,6 +2917,63 @@ async function initApp() {
         CustomTriggerManager.addCustomTrigger(label, category);
         ScreenManager.hideModal('addTriggerModal');
         renderCustomTriggersList();
+    });
+
+    // Customize Label Modal Handlers
+    document.getElementById('closeCustomizeLabel').addEventListener('click', () => {
+        ScreenManager.hideModal('customizeLabelModal');
+    });
+
+    document.getElementById('cancelCustomizeLabel').addEventListener('click', () => {
+        ScreenManager.hideModal('customizeLabelModal');
+    });
+
+    document.getElementById('saveCustomLabel').addEventListener('click', () => {
+        const modal = document.getElementById('customizeLabelModal');
+        const input = document.getElementById('customLabelInput');
+        const type = modal.dataset.type;
+        const key = modal.dataset.key;
+        const customLabel = input.value.trim();
+
+        if (!customLabel) {
+            alert('Please enter a custom label');
+            return;
+        }
+
+        // Save the custom label
+        CustomLabelManager.setCustomLabel(type, key, customLabel);
+
+        // Re-render the appropriate screen to show the updated label
+        if (type === 'emoji') {
+            UIRenderer.renderEmojis(appState.sessionData.mood);
+        } else if (type === 'trigger') {
+            UIRenderer.renderTriggers(appState.sessionData.mood);
+        }
+
+        Haptics.success();
+        ScreenManager.hideModal('customizeLabelModal');
+    });
+
+    document.getElementById('resetCustomLabel').addEventListener('click', () => {
+        const modal = document.getElementById('customizeLabelModal');
+        const type = modal.dataset.type;
+        const key = modal.dataset.key;
+        const originalLabel = modal.dataset.originalLabel;
+
+        if (confirm(`Reset to default label: "${originalLabel}"?`)) {
+            // Reset the custom label
+            CustomLabelManager.resetCustomLabel(type, key);
+
+            // Re-render the appropriate screen to show the reset label
+            if (type === 'emoji') {
+                UIRenderer.renderEmojis(appState.sessionData.mood);
+            } else if (type === 'trigger') {
+                UIRenderer.renderTriggers(appState.sessionData.mood);
+            }
+
+            Haptics.success();
+            ScreenManager.hideModal('customizeLabelModal');
+        }
     });
 
     // Close modals on outside click
@@ -2938,7 +3477,12 @@ async function renderLinkedContactsList() {
         <div class="linked-contact-item">
             <div class="linked-contact-avatar">${(contact.displayName || 'U').charAt(0).toUpperCase()}</div>
             <div class="linked-contact-info">
-                <div class="linked-contact-name">${contact.displayName || 'User'}</div>
+                <div class="linked-contact-name">
+                    ${contact.displayName || 'User'}
+                    <span class="connection-type-icons">
+                        <span class="connection-icon" title="Push Notifications">🔔</span>
+                    </span>
+                </div>
                 <div class="linked-contact-email">${contact.email || ''}</div>
             </div>
             <button class="btn-icon-delete" onclick="unlinkContact('${contact.id}')">×</button>
@@ -3187,7 +3731,25 @@ async function syncDataToCloud() {
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', () => {
+        // Hide splash screen after animation completes
+        setTimeout(() => {
+            const splash = document.getElementById('splashScreen');
+            if (splash) {
+                splash.classList.add('hidden');
+            }
+        }, 2500);
+
+        initApp();
+    });
 } else {
+    // Hide splash screen after animation completes
+    setTimeout(() => {
+        const splash = document.getElementById('splashScreen');
+        if (splash) {
+            splash.classList.add('hidden');
+        }
+    }, 2500);
+
     initApp();
 }

@@ -2,6 +2,97 @@
    Flares - Mood Tracking App Styles
    ============================================================================ */
 
+/* Splash Screen */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--background);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeOut 0.5s ease-out 2s forwards;
+}
+
+.splash-screen.hidden {
+    display: none;
+}
+
+.splash-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.splash-flare {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    opacity: 0;
+    animation: flareAppear 0.6s ease-out forwards;
+}
+
+.splash-flare-1 {
+    animation-delay: 0.2s;
+    filter: drop-shadow(0 0 20px var(--mood-green)) drop-shadow(0 0 40px var(--mood-green-glow));
+}
+
+.splash-flare-2 {
+    animation-delay: 0.5s;
+    filter: drop-shadow(0 0 20px var(--mood-orange)) drop-shadow(0 0 40px var(--mood-orange-glow));
+}
+
+.splash-flare-3 {
+    animation-delay: 0.8s;
+    filter: drop-shadow(0 0 20px var(--mood-red)) drop-shadow(0 0 40px var(--mood-red-glow));
+}
+
+.splash-title {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    opacity: 0;
+    animation: titleAppear 0.6s ease-out 1.1s forwards;
+    letter-spacing: 0.05em;
+}
+
+@keyframes flareAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.5) rotate(180deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes titleAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
 /* Base App Container */
 .flares-app {
     min-height: 100vh;
@@ -19,6 +110,18 @@
     position: sticky;
     top: 0;
     z-index: 100;
+}
+
+/* Hide navigation on mood screen for minimalist design */
+#moodScreen.active ~ nav.flares-nav,
+.screen#moodScreen.active ~ .flares-nav,
+#moodScreen + .flares-nav {
+    display: none;
+}
+
+/* Alternative: hide nav when mood screen is active */
+body:has(#moodScreen.active) .flares-nav {
+    display: none;
 }
 
 .nav-container {
@@ -70,8 +173,7 @@
     color: var(--text-primary);
 }
 
-.nav-btn,
-.settings-btn {
+.nav-btn {
     background: var(--bg-secondary);
     border: 1px solid var(--divider);
     color: var(--text-primary);
@@ -87,6 +189,27 @@
     justify-content: center;
 }
 
+.settings-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .nav-btn:hover,
 .settings-btn:hover {
     background: var(--bg-tertiary);
@@ -94,6 +217,17 @@
 
 .settings-btn:hover {
     transform: rotate(90deg);
+}
+
+/* Responsive positioning for mobile */
+@media (max-width: 768px) {
+    .settings-btn {
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.3rem;
+    }
 }
 
 .inbox-icon {
@@ -148,6 +282,23 @@
     color: var(--text-secondary);
     text-align: center;
     margin-bottom: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.selection-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mood-green);
+    color: white;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    min-width: 80px;
 }
 
 .screen-actions {
@@ -180,43 +331,92 @@
 }
 
 /* Flares (Mood Selection) */
+/* Info Button (Top Left) */
+.info-btn {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1000;
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.info-btn:hover {
+    background: var(--bg-tertiary);
+    transform: scale(1.05);
+}
+
+/* Responsive info button for mobile */
+@media (max-width: 768px) {
+    .info-btn {
+        top: 0.75rem;
+        left: 0.75rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.3rem;
+    }
+}
+
+/* Flares Container - Minimalist centered layout */
 .flares-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    max-width: 500px;
-    margin: 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+    height: 100%;
+    min-height: calc(100vh - 100px);
 }
 
 .flare-btn {
-    background: var(--card-background);
-    border: 2px solid var(--divider);
-    border-radius: var(--radius-lg);
-    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    padding: 0;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    position: relative;
-    overflow: hidden;
+    justify-content: center;
 }
 
 .flare-btn:hover {
-    transform: translateY(-3px);
+    transform: scale(1.1);
 }
 
 .flare-btn:active {
-    transform: scale(0.98);
+    transform: scale(0.95);
 }
 
-/* Flare Icon (PNG images) */
+/* Flare Icon (PNG images) - Larger for minimalist design */
 .flare-icon {
-    width: 100px;
-    height: 100px;
-    flex-shrink: 0;
+    width: 180px;
+    height: 180px;
     object-fit: contain;
-    transition: transform 0.15s ease, filter 0.15s ease;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+/* Responsive sizing for mobile */
+@media (max-width: 768px) {
+    .flare-icon {
+        width: 140px;
+        height: 140px;
+    }
+
+    .flares-container {
+        gap: 2rem;
+    }
 }
 
 /* Glow effects for each mood color */
@@ -247,25 +447,6 @@
     filter: drop-shadow(0 0 25px var(--mood-red)) drop-shadow(0 0 50px var(--mood-red-glow)) drop-shadow(0 0 70px var(--mood-red-glow));
 }
 
-/* Flare text container */
-.flare-text {
-    flex: 1;
-    text-align: left;
-}
-
-.flare-label {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-primary);
-    display: block;
-}
-
-.flare-desc {
-    font-size: var(--font-size-sm);
-    color: var(--text-secondary);
-    display: block;
-    margin-top: 0.25rem;
-}
 
 /* Emoji Grid */
 .emoji-grid {
@@ -287,6 +468,7 @@
     align-items: center;
     gap: 0.5rem;
     min-height: var(--touch-minimum);
+    position: relative;
 }
 
 .emoji-btn:hover {
@@ -301,6 +483,35 @@
 .emoji-btn.selected {
     background: var(--bg-tertiary);
     border-color: var(--text-secondary);
+}
+
+.emoji-btn.favorited {
+    border-color: #FFD700;
+}
+
+.emoji-star-btn {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    color: #FFD700;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    transition: all 0.15s ease;
+    z-index: 10;
+    opacity: 0.6;
+}
+
+.emoji-star-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.emoji-btn.favorited .emoji-star-btn {
+    opacity: 1;
 }
 
 /* Mood-specific selection colors for emojis */
@@ -353,6 +564,7 @@
     text-align: left;
     min-height: var(--touch-minimum);
     overflow: hidden;
+    position: relative;
 }
 
 .trigger-btn:hover {
@@ -366,6 +578,35 @@
 .trigger-btn.selected {
     background: var(--bg-tertiary);
     border-color: var(--text-secondary);
+}
+
+.trigger-btn.favorited {
+    border-color: #FFD700;
+}
+
+.trigger-star-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: transparent;
+    border: none;
+    font-size: 1.1rem;
+    color: #FFD700;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    transition: all 0.15s ease;
+    z-index: 10;
+    opacity: 0.6;
+}
+
+.trigger-star-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.trigger-btn.favorited .trigger-star-btn {
+    opacity: 1;
 }
 
 /* Mood-specific selection colors for triggers */
@@ -711,6 +952,49 @@
     font-size: var(--font-size-xs);
 }
 
+/* Draft Notification */
+.draft-notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--mood-green);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    animation: slideDown 0.3s ease-out;
+    max-width: 90%;
+}
+
+.draft-notification.fade-out {
+    animation: fadeOut 0.5s ease-out forwards;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+}
+
 /* Success Modal */
 .success-icon {
     width: 100px;
@@ -948,25 +1232,6 @@
 @media (max-width: 768px) {
     .screen-title {
         font-size: 2rem;
-    }
-
-    .flares-container {
-        gap: 1rem;
-    }
-
-    .flare-btn {
-        padding: 1.5rem;
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .flare-light {
-        width: 60px;
-        height: 60px;
-    }
-
-    .flare-label {
-        font-size: 1.5rem;
     }
 
     .emoji-grid {
@@ -1625,6 +1890,21 @@ hr {
 .linked-contact-name {
     font-weight: 600;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.connection-type-icons {
+    display: inline-flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.connection-icon {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    cursor: help;
 }
 
 .linked-contact-email {
@@ -1691,6 +1971,29 @@ hr {
     font-size: 0.85rem;
     font-weight: 600;
     margin: 0;
+}
+
+/* Customize Label Modal */
+.customize-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+.customize-preview-icon {
+    font-size: 3rem;
+}
+
+.customize-preview-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .link-code-input {
@@ -2404,6 +2707,144 @@ input.input:disabled {
     font-size: var(--font-size-xs);
     color: var(--text-secondary);
     margin-top: 0.25rem;
+}
+
+/* ============================================================================
+   Contacts Section (Preview Screen)
+   ============================================================================ */
+
+.contacts-section {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: var(--card-background);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-lg);
+}
+
+.contacts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.contacts-header h4 {
+    margin: 0;
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
+}
+
+.contacts-count {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.contacts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.contact-toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-md);
+    transition: background 0.2s;
+}
+
+.contact-toggle-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.contact-toggle-item.inactive {
+    opacity: 0.5;
+}
+
+.contact-toggle-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.contact-toggle-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--mood-green);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.contact-toggle-details {
+    flex: 1;
+}
+
+.contact-toggle-name {
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: 0.125rem;
+}
+
+.contact-toggle-email {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-tertiary);
+    transition: 0.3s;
+    border-radius: 26px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: var(--mood-green);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(22px);
 }
 
 /* ============================================================================
