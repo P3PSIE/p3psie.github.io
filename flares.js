@@ -2940,20 +2940,26 @@ async function initApp() {
     });
 
     document.getElementById('continueToPreview').addEventListener('click', async () => {
-        UIRenderer.renderPreview(appState.sessionData);
+        try {
+            UIRenderer.renderPreview(appState.sessionData);
 
-        // Populate message field if editing
-        const messageInput = document.getElementById('flareMessage');
-        const charCount = document.getElementById('messageCharCount');
-        if (messageInput && appState.sessionData.message) {
-            messageInput.value = appState.sessionData.message;
-            if (charCount) charCount.textContent = appState.sessionData.message.length;
+            // Populate message field if editing
+            const messageInput = document.getElementById('flareMessage');
+            const charCount = document.getElementById('messageCharCount');
+            if (messageInput && appState.sessionData.message) {
+                messageInput.value = appState.sessionData.message;
+                if (charCount) charCount.textContent = appState.sessionData.message.length;
+            }
+
+            // Render contacts list with toggles
+            await UIRenderer.renderContactsList();
+
+            ScreenManager.showScreen('previewScreen');
+        } catch (error) {
+            console.error('Error navigating to preview:', error);
+            // Navigate anyway to avoid getting stuck
+            ScreenManager.showScreen('previewScreen');
         }
-
-        // Render contacts list with toggles
-        await UIRenderer.renderContactsList();
-
-        ScreenManager.showScreen('previewScreen');
     });
 
     // Message input handling
