@@ -2888,6 +2888,174 @@ class HistoryActions {
 
 const appState = new AppState();
 
+// Update info modal content based on current screen
+function updateInfoModalContent(screenId) {
+    const modalBody = document.querySelector('#infoModal .modal-body');
+    const modalTitle = document.querySelector('#infoModal .modal-header h2');
+
+    let content = '';
+    let title = 'About Flares';
+
+    switch (screenId) {
+        case 'emojiScreen':
+            title = 'Select Emotions';
+            content = `
+                <p class="tutorial-intro">Choose emojis that describe how you're feeling right now</p>
+
+                <div class="tutorial-section">
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">👆</div>
+                        <div class="tutorial-content">
+                            <h3>Tap to Select</h3>
+                            <p>Tap emojis to select them. You can choose as many as you like or skip this step entirely.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">⭐</div>
+                        <div class="tutorial-content">
+                            <h3>Star Your Favorites</h3>
+                            <p>Long-press an emoji to favorite it. Favorites appear at the top for quick access.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">✏️</div>
+                        <div class="tutorial-content">
+                            <h3>Customize Labels</h3>
+                            <p>Long-press and hold to change the label text to something more personal.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">➕</div>
+                        <div class="tutorial-content">
+                            <h3>Add Custom Emojis</h3>
+                            <p>Manage custom emojis in Settings to add your own frequently used emotions.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'triggersScreen':
+            title = 'Select Triggers';
+            const currentMood = appState.sessionData.mood || 'green';
+            const moodLabels = {
+                green: "positive factors",
+                orange: "challenging factors",
+                red: "difficult factors"
+            };
+            content = `
+                <p class="tutorial-intro">What's contributing to how you feel? Select any ${moodLabels[currentMood]} (optional)</p>
+
+                <div class="tutorial-section">
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">📂</div>
+                        <div class="tutorial-content">
+                            <h3>Organized by Category</h3>
+                            <p>Triggers are grouped into Sensory, Physical, Emotional, and Cognitive categories. Tap headers to expand/collapse.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">🎯</div>
+                        <div class="tutorial-content">
+                            <h3>Mood-Specific Options</h3>
+                            <p>The triggers shown match your selected mood. Positive triggers for good moods, challenging ones for difficult moods.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">⭐</div>
+                        <div class="tutorial-content">
+                            <h3>Star Common Triggers</h3>
+                            <p>Long-press to favorite triggers you experience often. They'll appear at the top of their category.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">✏️</div>
+                        <div class="tutorial-content">
+                            <h3>Personalize Labels</h3>
+                            <p>Long-press and hold to rename triggers to match your personal experience.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+
+        default:
+            // Default general help content
+            content = `
+                <p class="tutorial-intro">Quickly communicate how you're feeling to your support network</p>
+
+                <div class="tutorial-section">
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon green-glow">✦</div>
+                        <div class="tutorial-content">
+                            <h3>I'm Okay</h3>
+                            <p>Feeling calm, regulated, and able to engage</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon orange-glow">✦</div>
+                        <div class="tutorial-content">
+                            <h3>I'm Struggling</h3>
+                            <p>Feeling stressed or finding things difficult</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon red-glow">✦</div>
+                        <div class="tutorial-content">
+                            <h3>I'm Overwhelmed</h3>
+                            <p>Feeling unable to cope or need support</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tutorial-section">
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">📝</div>
+                        <div class="tutorial-content">
+                            <h3>How to Send a Flare</h3>
+                            <p>Select your mood, pick emotions and triggers (optional), add a message, then send to your support network</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">⭐</div>
+                        <div class="tutorial-content">
+                            <h3>Favorites & Customization</h3>
+                            <p>Star emojis and triggers to sort them to the top. Long-press to customize labels</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">🔗</div>
+                        <div class="tutorial-content">
+                            <h3>Link with Contacts</h3>
+                            <p>Generate a link code in Settings to connect with trusted friends, family, or therapists</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-item">
+                        <div class="tutorial-icon-small">🔔</div>
+                        <div class="tutorial-content">
+                            <h3>Receive Support</h3>
+                            <p>Check your inbox to see when contacts send you flares and reach out to them</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+    }
+
+    modalTitle.textContent = title;
+    modalBody.innerHTML = content;
+}
+
 async function initApp() {
     // Check for shared link
     const sharedData = NotificationManager.parseSharedLink();
@@ -3082,6 +3250,9 @@ async function initApp() {
 
     // Info button
     document.getElementById('infoBtn').addEventListener('click', () => {
+        // Update modal content based on current screen
+        const currentScreen = document.querySelector('.screen.active')?.id;
+        updateInfoModalContent(currentScreen);
         ScreenManager.showModal('infoModal');
     });
 
