@@ -112,18 +112,6 @@
     z-index: 100;
 }
 
-/* Hide navigation on mood screen for minimalist design */
-#moodScreen.active ~ nav.flares-nav,
-.screen#moodScreen.active ~ .flares-nav,
-#moodScreen + .flares-nav {
-    display: none;
-}
-
-/* Alternative: hide nav when mood screen is active */
-body:has(#moodScreen.active) .flares-nav {
-    display: none;
-}
-
 .nav-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -658,11 +646,12 @@ body:has(#moodScreen.active) .flares-nav {
 
 /* Notification Preview */
 .notification-preview {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--card-background);
+    border: 1px solid var(--divider);
     border-radius: 20px;
     padding: 2rem;
     margin: 2rem 0;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-lg);
 }
 
 .preview-mood {
@@ -671,7 +660,7 @@ body:has(#moodScreen.active) .flares-nav {
     gap: 1rem;
     margin-bottom: 1.5rem;
     padding-bottom: 1.5rem;
-    border-bottom: 2px solid;
+    border-bottom: 2px solid var(--divider);
 }
 
 .preview-mood-indicator {
@@ -687,12 +676,12 @@ body:has(#moodScreen.active) .flares-nav {
 .preview-mood h3 {
     font-size: 1.5rem;
     margin: 0;
-    color: #1f2937;
+    color: var(--text-primary);
 }
 
 .preview-time {
     font-size: 0.9rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     margin: 0.25rem 0 0 0;
 }
 
@@ -702,8 +691,9 @@ body:has(#moodScreen.active) .flares-nav {
 
 .preview-section h4 {
     font-size: 1rem;
-    color: #4b5563;
+    color: var(--text-secondary);
     margin-bottom: 0.75rem;
+    font-weight: var(--font-weight-semibold);
 }
 
 .preview-tags {
@@ -713,12 +703,12 @@ body:has(#moodScreen.active) .flares-nav {
 }
 
 .tag {
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
     border-radius: 20px;
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
-    color: #1f2937;
+    color: var(--text-primary);
 }
 
 /* Support List */
