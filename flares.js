@@ -688,6 +688,22 @@ class ProfileManager {
         }
     }
 
+    // Update phone number
+    static async updatePhoneNumber(phoneNumber) {
+        const profile = this.getProfile();
+        profile.phoneNumber = phoneNumber || null;
+        this.saveProfile(profile);
+
+        // Also save to Firestore
+        if (AuthManager.currentUser && window.firebaseDb && window.firebaseDbFunctions) {
+            const { doc, setDoc } = window.firebaseDbFunctions;
+            await setDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'), {
+                phoneNumber: phoneNumber || null,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+    }
+
     // Update avatar (stored as base64 in localStorage and Firestore)
     static async updateAvatar(base64Image) {
         const profile = this.getProfile();
@@ -731,11 +747,16 @@ class ProfileManager {
             const profileDoc = await getDoc(doc(window.firebaseDb, 'users', AuthManager.currentUser.uid, 'profile', 'info'));
             if (profileDoc.exists()) {
                 const data = profileDoc.data();
+                const profile = this.getProfile();
+
                 if (data.avatarUrl) {
-                    const profile = this.getProfile();
                     profile.avatarUrl = data.avatarUrl;
-                    this.saveProfile(profile);
                 }
+                if (data.phoneNumber) {
+                    profile.phoneNumber = data.phoneNumber;
+                }
+
+                this.saveProfile(profile);
             }
         } catch (error) {
             console.error('Error loading profile from cloud:', error);
@@ -3353,6 +3374,7 @@ function setupProfileHandlers() {
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', async () => {
             const displayName = document.getElementById('editDisplayName').value.trim();
+            const phoneNumber = document.getElementById('editPhone').value.trim();
             const errorEl = document.getElementById('profileEditError');
             const avatarFileInput = document.getElementById('avatarFileInput');
 
@@ -3368,6 +3390,9 @@ function setupProfileHandlers() {
             try {
                 // Update display name
                 await ProfileManager.updateDisplayName(displayName);
+
+                // Update phone number
+                await ProfileManager.updatePhoneNumber(phoneNumber);
 
                 // Handle avatar
                 const pendingAvatar = avatarFileInput?.dataset.pendingAvatar;
@@ -3415,6 +3440,12 @@ function openEditProfileModal() {
     const emailInput = document.getElementById('editEmail');
     if (emailInput) {
         emailInput.value = user.email || '';
+    }
+
+    // Set phone number
+    const phoneInput = document.getElementById('editPhone');
+    if (phoneInput) {
+        phoneInput.value = profile.phoneNumber || '';
     }
 
     // Set avatar
