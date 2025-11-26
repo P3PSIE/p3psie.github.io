@@ -1951,14 +1951,20 @@ class DeepLinkManager {
             case 'home':
             case 'mood':
                 ScreenManager.showScreen('moodScreen');
+                // Clear hash after navigation
+                setTimeout(() => history.replaceState(null, null, ' '), 100);
                 break;
 
             case 'settings':
                 ScreenManager.showModal('settingsModal');
+                // Clear hash after navigation
+                setTimeout(() => history.replaceState(null, null, ' '), 100);
                 break;
 
             case 'profile':
                 ScreenManager.showModal('editProfileModal');
+                // Clear hash after navigation
+                setTimeout(() => history.replaceState(null, null, ' '), 100);
                 break;
 
             case 'links':
@@ -1970,6 +1976,8 @@ class DeepLinkManager {
                 setTimeout(() => {
                     const linksTab = document.querySelector('[data-tab="links"]');
                     if (linksTab) linksTab.click();
+                    // Clear hash after navigation
+                    history.replaceState(null, null, ' ');
                 }, 100);
                 break;
 
@@ -1993,6 +2001,11 @@ class DeepLinkManager {
                 this.highlightInboxItem(itemId);
             }, 300); // Wait for screen transition
         }
+
+        // Clear hash after navigation to prevent triggering on refresh
+        setTimeout(() => {
+            history.replaceState(null, null, ' ');
+        }, 100);
     }
 
     static highlightInboxItem(itemId) {
