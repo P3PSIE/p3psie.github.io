@@ -39,10 +39,10 @@ This document tracks features present in the iOS app that are missing or incompl
 | [x] | **Profile Photo Upload** | ✅ Complete! Full profile photo management with upload, resize, and Firestore sync. |
 | [x] | **Phone Number Field** | ✅ Complete! Optional phone number field in profile for SMS fallback. |
 | [x] | **Clear History by Type** | ✅ Complete! Separate buttons to clear sent, received, or all flares. |
+| [x] | **Quick Profile Setup Flow** | ✅ Complete! Welcome modal for new users with onboarding steps and profile setup. |
 | [ ] | **Contact Connection Type Indicators** | iOS shows icons for how contacts were connected (QR, NFC, Code, etc). |
 | [ ] | **Deep Linking** | iOS supports `flare://received` URLs to open specific screens from notifications. |
 | [ ] | **Emoji Selection Labels** | iOS shows emoji feeling labels in a popup when tapping. |
-| [ ] | **Quick Profile Setup Flow** | iOS shows optional profile setup on first launch. |
 
 ---
 
