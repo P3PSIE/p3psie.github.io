@@ -516,6 +516,49 @@
     opacity: 1;
 }
 
+/* Emoji Tooltip */
+.emoji-tooltip {
+    position: fixed;
+    z-index: 10000;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.emoji-tooltip-content {
+    background: var(--card-background);
+    border: 2px solid var(--divider);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.5rem;
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    animation: tooltipAppear 0.2s ease;
+}
+
+.emoji-tooltip-emoji {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.emoji-tooltip-label {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+@keyframes tooltipAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
 /* Mood-specific selection colors for emojis */
 .mood-green .emoji-btn.selected {
     background: rgba(46, 204, 113, 0.2);

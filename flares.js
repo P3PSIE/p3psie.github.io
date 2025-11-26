@@ -2054,9 +2054,18 @@ class UIRenderer {
 
             // Long-press handler
             let pressTimer;
+            let tooltipTimer;
             btn.addEventListener('touchstart', (e) => {
                 if (e.target.classList.contains('emoji-star-btn')) return;
+
+                // Show tooltip briefly on tap
+                this.showEmojiTooltip(emoji, displayLabel, btn);
+                tooltipTimer = setTimeout(() => {
+                    this.hideEmojiTooltip();
+                }, 1500);
+
                 pressTimer = setTimeout(() => {
+                    this.hideEmojiTooltip();
                     Haptics.medium(btn);
                     this.openCustomizeModal('emoji', emoji, label, displayLabel);
                 }, 500);
@@ -2064,10 +2073,15 @@ class UIRenderer {
 
             btn.addEventListener('touchend', () => {
                 clearTimeout(pressTimer);
+                clearTimeout(tooltipTimer);
+                // Hide tooltip after a short delay
+                setTimeout(() => this.hideEmojiTooltip(), 300);
             });
 
             btn.addEventListener('touchmove', () => {
                 clearTimeout(pressTimer);
+                clearTimeout(tooltipTimer);
+                this.hideEmojiTooltip();
             });
 
             // Mouse long-press for desktop
@@ -2085,6 +2099,13 @@ class UIRenderer {
 
             btn.addEventListener('mouseleave', () => {
                 clearTimeout(pressTimer);
+                this.hideEmojiTooltip();
+            });
+
+            // Tooltip on hover (desktop)
+            btn.addEventListener('mouseenter', (e) => {
+                if (e.target.classList.contains('emoji-star-btn')) return;
+                this.showEmojiTooltip(emoji, displayLabel, btn);
             });
 
             grid.appendChild(btn);
@@ -2526,6 +2547,38 @@ class UIRenderer {
             badge.style.display = 'inline-flex';
         } else {
             badge.style.display = 'none';
+        }
+    }
+
+    static showEmojiTooltip(emoji, label, buttonElement) {
+        const tooltip = document.getElementById('emojiTooltip');
+        const tooltipEmoji = document.getElementById('tooltipEmoji');
+        const tooltipLabel = document.getElementById('tooltipLabel');
+
+        if (!tooltip || !tooltipEmoji || !tooltipLabel) return;
+
+        // Set tooltip content
+        tooltipEmoji.textContent = emoji;
+        tooltipLabel.textContent = label;
+
+        // Position tooltip above the button
+        const rect = buttonElement.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        // Calculate position (centered above button with some spacing)
+        const left = rect.left + (rect.width / 2);
+        const top = rect.top - 10; // 10px above button
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+        tooltip.style.transform = 'translate(-50%, -100%)';
+        tooltip.style.display = 'block';
+    }
+
+    static hideEmojiTooltip() {
+        const tooltip = document.getElementById('emojiTooltip');
+        if (tooltip) {
+            tooltip.style.display = 'none';
         }
     }
 
