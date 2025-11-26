@@ -149,6 +149,20 @@ body:has(#moodScreen.active) .flares-nav {
     object-fit: contain;
 }
 
+.nav-logo-text {
+    font-size: 1.75rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+@media (max-width: 768px) {
+    .nav-logo-text {
+        font-size: 1.5rem;
+    }
+}
+
 .nav-actions {
     display: flex;
     justify-content: flex-end;
@@ -401,8 +415,8 @@ body:has(#moodScreen.active) .flares-nav {
 
 /* Flare Icon (PNG images) - Larger for minimalist design */
 .flare-icon {
-    width: 180px;
-    height: 180px;
+    width: 288px;
+    height: 288px;
     object-fit: contain;
     transition: transform 0.2s ease, filter 0.2s ease;
 }
@@ -410,8 +424,8 @@ body:has(#moodScreen.active) .flares-nav {
 /* Responsive sizing for mobile */
 @media (max-width: 768px) {
     .flare-icon {
-        width: 140px;
-        height: 140px;
+        width: 224px;
+        height: 224px;
     }
 
     .flares-container {
@@ -1046,7 +1060,31 @@ body:has(#moodScreen.active) .flares-nav {
 
 .modal-body h3 {
     color: var(--text-primary);
+    margin: 1.5rem 0 0.75rem 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+}
+
+.modal-body h3:first-child {
+    margin-top: 0.5rem;
+}
+
+.modal-body ul,
+.modal-body ol {
+    margin: 0.5rem 0 1rem 0;
+    padding-left: 1.5rem;
+    color: var(--text-primary);
+}
+
+.modal-body li {
     margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.modal-body p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1rem;
 }
 
 .help-text {
@@ -1118,12 +1156,12 @@ body:has(#moodScreen.active) .flares-nav {
 }
 
 .modal-content.success h2 {
-    color: #1f2937;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
 .modal-content.success p {
-    color: #6b7280;
+    color: var(--text-secondary);
     margin-bottom: 2rem;
 }
 
