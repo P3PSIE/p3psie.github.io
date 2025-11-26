@@ -98,45 +98,51 @@ const FLARES_CONFIG = {
     triggers: {
         // Sensory triggers
         sensory: [
-            { id: 'loud_noises', label: 'Overwhelming sounds', icon: '🔊' },
-            { id: 'bright_lights', label: 'Bright lights', icon: '💡' },
-            { id: 'crowds', label: 'Crowded spaces', icon: '👥' },
-            { id: 'sensory_overload', label: 'Sensory overload', icon: '🎆' },
-            { id: 'textures', label: 'Uncomfortable textures', icon: '🧶' },
-            { id: 'smells', label: 'Strong smells', icon: '👃' }
+            { id: 'loud_noises', label: 'Overwhelming sounds', icon: '🔊', moods: ['orange', 'red'] },
+            { id: 'bright_lights', label: 'Bright lights', icon: '💡', moods: ['orange', 'red'] },
+            { id: 'crowds', label: 'Crowded spaces', icon: '👥', moods: ['orange', 'red'] },
+            { id: 'sensory_overload', label: 'Sensory overload', icon: '🎆', moods: ['red'] },
+            { id: 'textures', label: 'Uncomfortable textures', icon: '🧶', moods: ['orange', 'red'] },
+            { id: 'smells', label: 'Strong smells', icon: '👃', moods: ['orange', 'red'] },
+            { id: 'pleasant_environment', label: 'Pleasant environment', icon: '🌸', moods: ['green'] },
+            { id: 'peaceful_sounds', label: 'Peaceful sounds', icon: '🎵', moods: ['green'] }
         ],
         // Physical triggers
         physical: [
-            { id: 'exercise', label: 'Exercise or movement', icon: '🏃' },
-            { id: 'lack_sleep', label: 'Lack of sleep', icon: '😴' },
-            { id: 'rest', label: 'Good rest', icon: '🛏️' },
-            { id: 'physical_pain', label: 'Physical pain', icon: '🤕' },
-            { id: 'hunger', label: 'Hunger', icon: '🍽️' },
-            { id: 'health_concern', label: 'Health concerns', icon: '🏥' },
-            { id: 'medication', label: 'Medication effects', icon: '💊' }
+            { id: 'exercise', label: 'Exercise or movement', icon: '🏃', moods: ['green', 'orange'] },
+            { id: 'lack_sleep', label: 'Lack of sleep', icon: '😴', moods: ['orange', 'red'] },
+            { id: 'rest', label: 'Good rest', icon: '🛏️', moods: ['green'] },
+            { id: 'physical_pain', label: 'Physical pain', icon: '🤕', moods: ['orange', 'red'] },
+            { id: 'hunger', label: 'Hunger', icon: '🍽️', moods: ['orange', 'red'] },
+            { id: 'health_concern', label: 'Health concerns', icon: '🏥', moods: ['orange', 'red'] },
+            { id: 'medication', label: 'Medication effects', icon: '💊', moods: ['orange', 'red'] },
+            { id: 'good_health', label: 'Feeling healthy', icon: '💪', moods: ['green'] }
         ],
         // Emotional triggers
         emotional: [
-            { id: 'social_time', label: 'Quality time with others', icon: '👥' },
-            { id: 'social_conflict', label: 'Social conflict', icon: '💬' },
-            { id: 'isolation', label: 'Feeling isolated', icon: '🚪' },
-            { id: 'confrontation', label: 'Confrontation', icon: '⚠️' },
-            { id: 'loss', label: 'Loss or grief', icon: '💔' },
-            { id: 'rejection', label: 'Rejection', icon: '🚫' },
-            { id: 'good_news', label: 'Good news', icon: '📰' },
-            { id: 'loved', label: 'Feeling loved', icon: '🥰' }
+            { id: 'social_time', label: 'Quality time with others', icon: '👥', moods: ['green'] },
+            { id: 'social_conflict', label: 'Social conflict', icon: '💬', moods: ['orange', 'red'] },
+            { id: 'isolation', label: 'Feeling isolated', icon: '🚪', moods: ['orange', 'red'] },
+            { id: 'confrontation', label: 'Confrontation', icon: '⚠️', moods: ['orange', 'red'] },
+            { id: 'loss', label: 'Loss or grief', icon: '💔', moods: ['red'] },
+            { id: 'rejection', label: 'Rejection', icon: '🚫', moods: ['red'] },
+            { id: 'good_news', label: 'Good news', icon: '📰', moods: ['green'] },
+            { id: 'loved', label: 'Feeling loved', icon: '🥰', moods: ['green'] },
+            { id: 'supported', label: 'Feeling supported', icon: '🤝', moods: ['green'] }
         ],
         // Cognitive triggers
         cognitive: [
-            { id: 'work_stress', label: 'Work pressure', icon: '💼' },
-            { id: 'deadlines', label: 'Deadlines', icon: '⏰' },
-            { id: 'financial', label: 'Financial concerns', icon: '💰' },
-            { id: 'change', label: 'Unexpected changes', icon: '🔄' },
-            { id: 'achievement', label: 'Accomplished something', icon: '🎯' },
-            { id: 'intrusive_thoughts', label: 'Intrusive thoughts', icon: '🌀' },
-            { id: 'panic', label: 'Panic attack', icon: '😱' },
-            { id: 'trauma_trigger', label: 'Trauma reminder', icon: '🚨' },
-            { id: 'decision_fatigue', label: 'Decision fatigue', icon: '🤯' }
+            { id: 'work_stress', label: 'Work pressure', icon: '💼', moods: ['orange', 'red'] },
+            { id: 'deadlines', label: 'Deadlines', icon: '⏰', moods: ['orange', 'red'] },
+            { id: 'financial', label: 'Financial concerns', icon: '💰', moods: ['orange', 'red'] },
+            { id: 'change', label: 'Unexpected changes', icon: '🔄', moods: ['orange', 'red'] },
+            { id: 'achievement', label: 'Accomplished something', icon: '🎯', moods: ['green'] },
+            { id: 'intrusive_thoughts', label: 'Intrusive thoughts', icon: '🌀', moods: ['red'] },
+            { id: 'panic', label: 'Panic attack', icon: '😱', moods: ['red'] },
+            { id: 'trauma_trigger', label: 'Trauma reminder', icon: '🚨', moods: ['red'] },
+            { id: 'decision_fatigue', label: 'Decision fatigue', icon: '🤯', moods: ['orange', 'red'] },
+            { id: 'clarity', label: 'Mental clarity', icon: '💡', moods: ['green'] },
+            { id: 'focus', label: 'Good focus today', icon: '🎯', moods: ['green'] }
         ]
     },
 

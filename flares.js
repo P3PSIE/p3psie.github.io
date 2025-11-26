@@ -2244,6 +2244,14 @@ class UIRenderer {
 
     static renderTriggers(mood) {
         const container = document.getElementById('triggersGrid');
+
+        // Save current collapse states before clearing
+        const collapseStates = {};
+        container.querySelectorAll('.trigger-category').forEach(section => {
+            const categoryId = section.dataset.category;
+            collapseStates[categoryId] = !section.classList.contains('collapsed');
+        });
+
         container.innerHTML = '';
 
         // Set mood class on container for styling
@@ -2260,9 +2268,10 @@ class UIRenderer {
             const category = TRIGGER_CATEGORIES[categoryId];
             const triggers = TRIGGERS_DATA[categoryId] || [];
 
-            // Create category section (collapsed by default)
+            // Create category section (restore previous state, or collapsed by default)
             const section = document.createElement('div');
-            section.className = 'trigger-category collapsed';
+            const wasExpanded = collapseStates[categoryId] || false;
+            section.className = wasExpanded ? 'trigger-category' : 'trigger-category collapsed';
             section.dataset.category = categoryId;
 
             // Create collapsible header
@@ -2289,8 +2298,13 @@ class UIRenderer {
                 return a.label.localeCompare(b.label);
             });
 
-            // Add triggers to grid
-            sortedTriggers.forEach(({ id, label, icon }) => {
+            // Add triggers to grid (filter by mood if moods array exists)
+            sortedTriggers.forEach(({ id, label, icon, moods }) => {
+                // Skip triggers that don't match current mood
+                if (moods && !moods.includes(mood)) {
+                    return;
+                }
+
                 // Check for custom label
                 const customLabel = CustomLabelManager.getCustomLabel('trigger', id);
                 const displayLabel = customLabel || label;
@@ -2410,7 +2424,12 @@ class UIRenderer {
                 return a.label.localeCompare(b.label);
             });
 
-            sortedCustomTriggers.forEach(({ id, label, icon }) => {
+            sortedCustomTriggers.forEach(({ id, label, icon, moods }) => {
+                // Skip triggers that don't match current mood
+                if (moods && !moods.includes(mood)) {
+                    return;
+                }
+
                 const isFavorite = FavoriteManager.isTriggerFavorite(id);
 
                 const btn = document.createElement('button');
@@ -2890,6 +2909,19 @@ async function initApp() {
 
     // Initialize deep linking
     DeepLinkManager.init();
+
+    // Listen for messages from service worker (e.g., notification clicks)
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        console.log('[SW Message]', event.data);
+        if (event.data.type === 'NAVIGATE_TO_INBOX') {
+            const flareId = event.data.flareId;
+            if (flareId) {
+                DeepLinkManager.navigateTo(`inbox/${flareId}`);
+            } else {
+                DeepLinkManager.navigateTo('inbox');
+            }
+        }
+    });
 
     // Load draft if exists
     const hasDraft = appState.loadDraft();

@@ -1741,9 +1741,9 @@ hr {
 }
 
 .customization-buttons .btn {
-    background: var(--surface-secondary);
+    background: var(--bg-secondary);
     color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--divider);
     font-weight: 600;
 }
 
@@ -1758,8 +1758,8 @@ hr {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: var(--surface-secondary);
-    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
     border-radius: 10px;
     margin-bottom: 0.75rem;
 }
@@ -1783,7 +1783,7 @@ hr {
 
 .custom-label {
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-primary);
     font-size: 1rem;
 }
 
@@ -1801,7 +1801,7 @@ hr {
 
 .custom-category {
     font-size: 0.85rem;
-    color: #6b7280;
+    color: var(--text-secondary);
 }
 
 /* Form Sections */
@@ -1812,7 +1812,7 @@ hr {
 .form-section label {
     display: block;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
 }
 
@@ -2144,8 +2144,8 @@ hr {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: var(--surface-secondary);
-    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
     border-radius: 12px;
     margin-bottom: 1rem;
 }
@@ -2300,8 +2300,8 @@ hr {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: var(--surface-secondary);
-    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
     border-radius: 10px;
     margin-bottom: 0.5rem;
 }
@@ -2350,7 +2350,7 @@ hr {
 
 /* Link Code Display */
 .link-code-display {
-    background: var(--surface-secondary);
+    background: var(--bg-secondary);
     border: 2px solid var(--mood-green);
     border-radius: 15px;
     padding: 2rem;
@@ -2416,8 +2416,8 @@ hr {
     justify-content: center;
     gap: 1rem;
     padding: 1.5rem;
-    background: var(--surface-secondary);
-    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border: 1px solid var(--divider);
     border-radius: 12px;
     margin: 1rem 0;
 }

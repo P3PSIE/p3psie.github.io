@@ -1,5 +1,5 @@
 // Service Worker for Flares - Offline support & Push Notifications
-const CACHE_NAME = 'flares-v9';
+const CACHE_NAME = 'flares-v10';
 
 const urlsToCache = [
     '/',
@@ -68,19 +68,30 @@ self.addEventListener('notificationclick', (event) => {
         return;
     }
 
-    // Open or focus the app
+    // Get flare ID from notification data if available
+    const flareId = event.notification.data?.flareId || event.notification.data?.id;
+    const inboxUrl = flareId ? `/#/inbox/${flareId}` : '/#/inbox';
+
+    // Open or focus the app and navigate to inbox
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((clientList) => {
-                // If app is already open, focus it
+                // If app is already open, focus it and navigate to inbox
                 for (const client of clientList) {
                     if (client.url.includes(self.location.origin) && 'focus' in client) {
-                        return client.focus();
+                        return client.focus().then(() => {
+                            // Navigate to inbox using postMessage
+                            client.postMessage({
+                                type: 'NAVIGATE_TO_INBOX',
+                                flareId: flareId
+                            });
+                            return client;
+                        });
                     }
                 }
-                // Otherwise open a new window
+                // Otherwise open a new window with inbox URL
                 if (clients.openWindow) {
-                    return clients.openWindow('/');
+                    return clients.openWindow(inboxUrl);
                 }
             })
     );
