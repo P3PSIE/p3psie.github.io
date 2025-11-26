@@ -2270,7 +2270,8 @@ class UIRenderer {
         `;
         addCustomBtn.addEventListener('click', () => {
             Haptics.light(addCustomBtn);
-            ScreenManager.showModal('customEmojisModal');
+            // Open add emoji modal directly with current mood pre-filled
+            openAddEmojiModalWithMood(mood);
         });
         grid.appendChild(addCustomBtn);
 
@@ -3477,6 +3478,7 @@ async function initApp() {
         const label = document.getElementById('emojiLabelInput').value.trim();
         const selectedColors = Array.from(document.querySelectorAll('.emoji-color-cb:checked'))
             .map(cb => cb.value);
+        const saveAsPermanent = document.getElementById('saveAsPermanent').checked;
 
         if (!emoji) {
             alert('Please select an emoji');
@@ -3493,9 +3495,22 @@ async function initApp() {
             return;
         }
 
-        CustomEmojiManager.addCustomEmoji(emoji, label, selectedColors);
+        if (saveAsPermanent) {
+            // Save permanently to custom emojis
+            CustomEmojiManager.addCustomEmoji(emoji, label, selectedColors);
+            renderCustomEmojisList();
+        } else {
+            // One-time use: add directly to current session
+            appState.toggleEmoji(emoji, label);
+        }
+
         ScreenManager.hideModal('addEmojiModal');
-        renderCustomEmojisList();
+
+        // Re-render emoji screen to show the newly added emoji
+        const currentMood = appState.sessionData.mood;
+        if (currentMood) {
+            UIRenderer.renderEmojis(currentMood);
+        }
     });
 
     // Custom Triggers Management
@@ -3609,6 +3624,31 @@ async function initApp() {
             }
         });
     });
+}
+
+// Helper function to open add emoji modal with pre-filled mood
+function openAddEmojiModalWithMood(mood) {
+    // Reset form
+    document.getElementById('selectedEmojiDisplay').textContent = 'Tap to select emoji';
+    document.getElementById('selectedEmojiDisplay').dataset.emoji = '';
+    document.getElementById('emojiLabelInput').value = '';
+
+    // Uncheck all mood colors first
+    document.querySelectorAll('.emoji-color-cb').forEach(cb => cb.checked = false);
+
+    // Pre-check the current mood
+    const moodCheckbox = document.querySelector(`.emoji-color-cb[value="${mood}"]`);
+    if (moodCheckbox) {
+        moodCheckbox.checked = true;
+    }
+
+    // Set toggle to OFF by default (one-time use)
+    const saveAsPermanent = document.getElementById('saveAsPermanent');
+    if (saveAsPermanent) {
+        saveAsPermanent.checked = false;
+    }
+
+    ScreenManager.showModal('addEmojiModal');
 }
 
 // Helper function to render custom emojis list
