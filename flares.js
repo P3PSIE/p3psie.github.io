@@ -883,16 +883,83 @@ class PushNotificationManager {
             return;
         }
 
-        // Request notification permission
-        try {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                await this.getAndSaveToken();
-                this.setupForegroundHandler();
-            }
-        } catch (error) {
-            console.error('Error requesting notification permission:', error);
+        // Check current permission status
+        const permission = Notification.permission;
+
+        if (permission === 'granted') {
+            // Already granted, get token immediately
+            await this.getAndSaveToken();
+            this.setupForegroundHandler();
+        } else if (permission === 'default') {
+            // Not asked yet - show a prompt button
+            this.showNotificationPrompt();
         }
+        // If 'denied', do nothing (user already blocked)
+    }
+
+    static showNotificationPrompt() {
+        // Check if prompt already exists
+        if (document.getElementById('notification-prompt')) return;
+
+        const prompt = document.createElement('div');
+        prompt.id = 'notification-prompt';
+        prompt.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-secondary);
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            max-width: 90%;
+        `;
+
+        prompt.innerHTML = `
+            <span style="color: var(--text-primary)">🔔 Enable notifications to receive Flares</span>
+            <button id="enable-notifications-btn" style="
+                background: #667eea;
+                color: white;
+                border: none;
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+            ">Enable</button>
+            <button id="dismiss-notification-prompt" style="
+                background: transparent;
+                color: var(--text-secondary);
+                border: none;
+                padding: 0.5rem;
+                cursor: pointer;
+            ">✕</button>
+        `;
+
+        document.body.appendChild(prompt);
+
+        // Enable button handler
+        document.getElementById('enable-notifications-btn').addEventListener('click', async () => {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    await this.getAndSaveToken();
+                    this.setupForegroundHandler();
+                    prompt.remove();
+                }
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+            }
+        });
+
+        // Dismiss button handler
+        document.getElementById('dismiss-notification-prompt').addEventListener('click', () => {
+            prompt.remove();
+        });
     }
 
     static async getAndSaveToken() {
