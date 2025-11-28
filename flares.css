@@ -2362,6 +2362,46 @@ hr {
 }
 
 /* ============================================================================
+   Notification Settings Styles
+   ============================================================================ */
+
+.notification-settings-section {
+    margin-bottom: 1.5rem;
+}
+
+.notification-status {
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.status-icon {
+    font-size: 2rem;
+}
+
+.status-text {
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.status-text.enabled {
+    color: #2ECC71;
+}
+
+.status-text.denied {
+    color: #E74C3C;
+}
+
+/* ============================================================================
    Linking System Styles
    ============================================================================ */
 

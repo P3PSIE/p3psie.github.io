@@ -890,11 +890,41 @@ class PushNotificationManager {
             // Already granted, get token immediately
             await this.getAndSaveToken();
             this.setupForegroundHandler();
-        } else if (permission === 'default') {
-            // Not asked yet - show a prompt button
-            this.showNotificationPrompt();
         }
-        // If 'denied', do nothing (user already blocked)
+
+        // Update status in settings
+        this.updateNotificationStatus();
+    }
+
+    static updateNotificationStatus() {
+        const statusIcon = document.getElementById('notificationStatusIcon');
+        const statusText = document.getElementById('notificationStatusText');
+        const enableBtn = document.getElementById('enableNotificationsBtn');
+        const checkBtn = document.getElementById('checkNotificationsBtn');
+
+        if (!statusIcon || !statusText || !enableBtn) return;
+
+        const permission = Notification.permission;
+
+        if (permission === 'granted') {
+            statusIcon.textContent = '🔔';
+            statusText.textContent = 'Enabled';
+            statusText.className = 'status-text enabled';
+            enableBtn.style.display = 'none';
+            if (checkBtn) checkBtn.style.display = 'none';
+        } else if (permission === 'denied') {
+            statusIcon.textContent = '🔕';
+            statusText.textContent = 'Blocked (check browser settings)';
+            statusText.className = 'status-text denied';
+            enableBtn.style.display = 'none';
+            if (checkBtn) checkBtn.style.display = 'inline-block';
+        } else {
+            statusIcon.textContent = '🔕';
+            statusText.textContent = 'Not enabled';
+            statusText.className = 'status-text';
+            enableBtn.style.display = 'inline-block';
+            if (checkBtn) checkBtn.style.display = 'none';
+        }
     }
 
     static showNotificationPrompt() {
@@ -3455,6 +3485,7 @@ async function initApp() {
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => {
         UIRenderer.renderHistory();
+        PushNotificationManager.updateNotificationStatus();
         ScreenManager.showModal('settingsModal');
     });
 
@@ -3535,6 +3566,30 @@ async function initApp() {
 
     // Linking System Handlers
     setupLinkingHandlers();
+
+    // Notification Settings Handlers
+    document.getElementById('enableNotificationsBtn')?.addEventListener('click', async () => {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                await PushNotificationManager.getAndSaveToken();
+                PushNotificationManager.setupForegroundHandler();
+                PushNotificationManager.updateNotificationStatus();
+                alert('Notifications enabled! You will now receive Flares.');
+            } else if (permission === 'denied') {
+                PushNotificationManager.updateNotificationStatus();
+                alert('Notifications were blocked. Please check your browser settings to enable them.');
+            }
+        } catch (error) {
+            console.error('Error enabling notifications:', error);
+            alert('Error enabling notifications. Please try again.');
+        }
+    });
+
+    document.getElementById('checkNotificationsBtn')?.addEventListener('click', () => {
+        PushNotificationManager.updateNotificationStatus();
+        alert('Please check your browser settings to allow notifications for this site.');
+    });
 
     // Custom Emojis Management
     document.getElementById('manageCustomEmojisBtn').addEventListener('click', (e) => {
