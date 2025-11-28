@@ -1569,21 +1569,46 @@
     margin-top: 1rem;
 }
 
+/* Ensure all text-based inputs use dark theme */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+textarea,
 .input {
     padding: 0.75rem 1rem;
     border: 1px solid var(--divider);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-base);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
     min-height: var(--touch-minimum);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
+input[type="text"]:hover,
+input[type="email"]:hover,
+input[type="tel"]:hover,
+input[type="password"]:hover,
+input[type="number"]:hover,
+input[type="url"]:hover,
+textarea:hover,
 .input:hover {
     border-color: var(--border-medium);
 }
 
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+textarea:focus,
 .input:focus {
     outline: none;
     border-color: var(--mood-green);
