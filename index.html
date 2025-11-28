@@ -21,6 +21,7 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, deleteDoc, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
         // Firebase config
         const firebaseConfig = {
@@ -37,6 +38,28 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // Initialize App Check for bot protection
+        // IMPORTANT: Get your reCAPTCHA site key from Firebase Console > App Check
+        // For now, using debug token in development
+        let appCheck = null;
+        try {
+            // In production, replace with your reCAPTCHA v3 site key
+            const recaptchaSiteKey = '6LfVOKEqAAAAABn8oj_KYNs9dOgwkqGFfZBIoZ55'; // Replace with your key
+
+            // Only enable in production (not localhost)
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                appCheck = initializeAppCheck(app, {
+                    provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+                    isTokenAutoRefreshEnabled: true
+                });
+                console.log('App Check initialized');
+            } else {
+                console.log('App Check disabled for localhost');
+            }
+        } catch (e) {
+            console.warn('App Check initialization failed:', e);
+        }
 
         // Initialize FCM (messaging)
         let messaging = null;
