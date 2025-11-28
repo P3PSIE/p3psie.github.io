@@ -563,6 +563,27 @@
     opacity: 1;
 }
 
+/* Delete button for custom emojis */
+.emoji-delete-btn {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.25rem;
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    transition: all 0.15s ease;
+    z-index: 10;
+    opacity: 0.6;
+}
+
+.emoji-delete-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
 /* Add Custom Emoji Button */
 .add-custom-emoji-btn {
     border-style: dashed !important;
@@ -1026,17 +1047,22 @@
 /* Modal */
 .modal {
     display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
     background: var(--bg-overlay);
     backdrop-filter: blur(5px);
     z-index: 1000;
     padding: 1rem;
-    overflow-y: auto;
+    overflow-y: auto !important;
 }
+
 
 .modal.active {
     display: flex;
@@ -1046,15 +1072,16 @@
 }
 
 .modal-content {
-    background: var(--bg-secondary);
+    background: var(--bg-secondary) !important;
     border-radius: var(--radius-lg);
     border: 1px solid var(--divider);
     max-width: 600px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: var(--shadow-2xl);
-    animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    overflow-x: visible;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    pointer-events: auto !important;
 }
 
 .modal-content.success {
@@ -1170,11 +1197,13 @@
 }
 
 .modal-header {
-    display: flex;
+    display: flex !important;
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
     border-bottom: 1px solid var(--divider);
+    position: relative !important;
+    z-index: 10 !important;
 }
 
 .modal-header h2 {
@@ -1206,6 +1235,40 @@
 .modal-body {
     padding: 1.5rem;
 }
+
+/* Fix for Add Emoji Modal content visibility */
+#addEmojiModal .modal-body {
+    background: var(--bg-secondary);
+}
+
+#addEmojiModal .form-section {
+    display: block;
+    margin-bottom: 1.5rem;
+}
+
+#addEmojiModal .color-checkbox {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--divider);
+}
+
+#addEmojiModal .color-checkbox span {
+    color: var(--text-primary);
+}
+
+#addEmojiModal .toggle-slider {
+    display: none;
+}
+
+/* Add Custom Trigger Modal styling */
+#addTriggerModal .color-checkbox {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--divider);
+}
+
+#addTriggerModal .color-checkbox span {
+    color: var(--text-primary);
+}
+
 
 .modal-body h3 {
     color: var(--text-primary);
@@ -1832,8 +1895,8 @@ hr {
 .emoji-picker-btn {
     width: 100%;
     height: 80px;
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--divider);
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.3s;
@@ -1845,17 +1908,17 @@ hr {
 
 .emoji-picker-btn:hover {
     border-color: #667eea;
-    background: #f3f4f6;
+    background: var(--bg-secondary);
 }
 
 .emoji-picker-btn #selectedEmojiDisplay {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--text-secondary);
 }
 
 .emoji-picker-btn #selectedEmojiDisplay[data-emoji]:not([data-emoji=""]) {
     font-size: 3rem;
-    color: #1f2937;
+    color: var(--text-primary);
 }
 
 /* Color Checkboxes */
@@ -1923,11 +1986,12 @@ hr {
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--divider);
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.3s;
+    color: var(--text-primary);
 }
 
 .category-radio input[type="radio"] {
@@ -1942,8 +2006,8 @@ hr {
 }
 
 .category-radio:hover {
-    border-color: #d1d5db;
-    background: #f3f4f6;
+    border-color: var(--border-medium);
+    background: var(--bg-secondary);
 }
 
 .category-radio input[type="radio"]:checked {
@@ -1976,8 +2040,8 @@ hr {
 }
 
 .emoji-picker-item {
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--divider);
     border-radius: 8px;
     font-size: 2rem;
     width: 100%;
@@ -1992,12 +2056,20 @@ hr {
 .emoji-picker-item:hover {
     transform: scale(1.1);
     border-color: #667eea;
-    background: #f3f4f6;
+    background: var(--bg-secondary);
     z-index: 1;
 }
 
 .emoji-picker-item:active {
     transform: scale(0.95);
+}
+
+/* Custom Emojis/Triggers List Containers */
+.custom-emojis-list,
+.custom-triggers-list {
+    display: block;
+    width: 100%;
+    margin-bottom: 1rem;
 }
 
 /* Empty State Enhancements */

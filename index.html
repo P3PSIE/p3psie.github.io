@@ -97,9 +97,6 @@
 
     <div class="stars"></div>
     <div class="flares-app">
-        <!-- Fixed Settings Button (Top Right) -->
-        <button class="settings-btn" id="settingsBtn">⚙️</button>
-
         <!-- Navigation Header -->
         <nav class="flares-nav">
             <div class="nav-container">
@@ -168,8 +165,8 @@
         <!-- Info Button (Top Left) -->
         <button class="info-btn" id="infoBtn" title="About Flares">ⓘ</button>
 
-        <!-- History Button (Top Left) -->
-        <button class="history-btn" id="historyBtn" title="View History">📋</button>
+        <!-- Settings Button -->
+        <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
 
         <!-- Emoji Label Tooltip -->
         <div class="emoji-tooltip" id="emojiTooltip" style="display: none;">
@@ -525,6 +522,28 @@
                                 <input type="radio" name="triggerCategory" value="cognitive">
                                 <span class="category-icon">🧠</span>
                                 <span>Cognitive</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label>Associated Mood Colors</label>
+                        <p class="help-text small">Select which moods this trigger applies to</p>
+                        <div class="color-checkboxes">
+                            <label class="color-checkbox green">
+                                <input type="checkbox" value="green" class="trigger-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Stable</span>
+                            </label>
+                            <label class="color-checkbox orange">
+                                <input type="checkbox" value="orange" class="trigger-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Struggling</span>
+                            </label>
+                            <label class="color-checkbox red">
+                                <input type="checkbox" value="red" class="trigger-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Overwhelmed</span>
                             </label>
                         </div>
                     </div>

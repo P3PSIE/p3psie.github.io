@@ -280,13 +280,14 @@ class CustomTriggerManager {
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(triggers));
     }
 
-    static addCustomTrigger(label, category) {
+    static addCustomTrigger(label, category, associatedColors = ['green', 'orange', 'red']) {
         const customTriggers = this.getCustomTriggers();
         customTriggers.push({
             id: 'custom_' + Date.now(),
             label,
             category,
-            icon: this.CATEGORIES[category].icon
+            icon: this.CATEGORIES[category].icon,
+            moods: associatedColors
         });
         this.saveCustomTriggers(customTriggers);
         // Sync to cloud
@@ -1723,7 +1724,8 @@ class AppState {
             emojis: [],
             triggers: [],
             message: '',
-            timestamp: null
+            timestamp: null,
+            oneTimeEmojis: []
         };
     }
 
@@ -1732,6 +1734,7 @@ class AppState {
         if (this.sessionData.mood !== mood) {
             this.sessionData.emojis = [];
             this.sessionData.triggers = [];
+            this.sessionData.oneTimeEmojis = []; // Clear one-time emojis too
         }
         this.sessionData.mood = mood;
         this.sessionData.timestamp = new Date().toISOString();
@@ -1771,7 +1774,8 @@ class AppState {
             emojis: [],
             triggers: [],
             message: '',
-            timestamp: null
+            timestamp: null,
+            oneTimeEmojis: []
         };
         // Clear message input
         const messageInput = document.getElementById('flareMessage');
@@ -1912,7 +1916,27 @@ class ScreenManager {
     }
 
     static showModal(modalId) {
-        document.getElementById(modalId).classList.add('active');
+        // Close all other modals first to prevent stacking
+        // BUT: Keep parent modals open (e.g., addEmojiModal when opening emojiPickerModal)
+        const allModals = document.querySelectorAll('.modal.active');
+        const parentModals = ['addEmojiModal', 'customTriggersModal']; // Modals that can have child modals
+
+        allModals.forEach(modal => {
+            if (modal.id !== modalId) {
+                // Don't close parent modal if opening a picker
+                if (modalId === 'emojiPickerModal' && parentModals.includes(modal.id)) {
+                    return; // Keep parent open
+                }
+                modal.classList.remove('active');
+            }
+        });
+
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('active');
+        } else {
+            console.error('Modal not found:', modalId);
+        }
     }
 
     static hideModal(modalId) {
@@ -2139,10 +2163,22 @@ class UIRenderer {
         // Set mood class on grid for styling
         grid.className = `emoji-grid mood-${mood}`;
 
-        // Combine default emojis with custom emojis for this mood
-        const defaultEmojis = EMOJI_DATA[mood];
+        // Combine default emojis with custom emojis and one-time emojis for this mood
         const customEmojis = CustomEmojiManager.getEmojisForMood(mood);
-        const allEmojis = [...defaultEmojis, ...customEmojis];
+        const oneTimeEmojis = (appState.sessionData.oneTimeEmojis || []).filter(e =>
+            e.associatedColors && e.associatedColors.includes(mood)
+        );
+
+        // Track which emojis are custom or one-time
+        const customEmojiSet = new Set(customEmojis.map(e => e.emoji));
+        const oneTimeEmojiSet = new Set(oneTimeEmojis.map(e => e.emoji));
+
+        // Filter out default emojis that have been overridden by custom/one-time versions
+        const defaultEmojis = EMOJI_DATA[mood].filter(e =>
+            !customEmojiSet.has(e.emoji) && !oneTimeEmojiSet.has(e.emoji)
+        );
+
+        const allEmojis = [...defaultEmojis, ...customEmojis, ...oneTimeEmojis];
 
         // Sort emojis: favorites first, then alphabetical
         allEmojis.sort((a, b) => {
@@ -2159,6 +2195,8 @@ class UIRenderer {
             const customLabel = CustomLabelManager.getCustomLabel('emoji', emoji);
             const displayLabel = customLabel || label;
             const isFavorite = FavoriteManager.isEmojiFavorite(emoji);
+            const isCustom = customEmojiSet.has(emoji);
+            const isOneTime = oneTimeEmojiSet.has(emoji);
 
             const btn = document.createElement('button');
             btn.className = 'emoji-btn';
@@ -2174,12 +2212,48 @@ class UIRenderer {
             btn.dataset.label = label;
             btn.dataset.originalLabel = label;
             btn.innerHTML = `
+                ${(isCustom || isOneTime) ? `<button class="emoji-delete-btn" data-emoji="${emoji}" title="Delete custom emoji">🗑️</button>` : ''}
                 <button class="emoji-star-btn" data-emoji="${emoji}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
                     ${isFavorite ? '★' : '☆'}
                 </button>
                 <span class="emoji-icon">${emoji}</span>
                 <span class="emoji-label">${displayLabel}</span>
             `;
+
+            // Delete button handler (for custom emojis only)
+            if (isCustom || isOneTime) {
+                const deleteBtn = btn.querySelector('.emoji-delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent emoji selection
+                    Haptics.medium(deleteBtn);
+
+                    // Confirm deletion
+                    if (confirm(`Delete "${displayLabel}" emoji?`)) {
+                        // Remove from permanent custom emojis if it's there
+                        if (isCustom) {
+                            // Find the custom emoji by emoji character and delete by ID
+                            const allCustomEmojis = CustomEmojiManager.getCustomEmojis();
+                            const emojiToDelete = allCustomEmojis.find(e => e.emoji === emoji);
+                            if (emojiToDelete) {
+                                CustomEmojiManager.deleteCustomEmoji(emojiToDelete.id);
+                            }
+                        }
+
+                        // Remove from one-time emojis if it's there
+                        if (isOneTime) {
+                            appState.sessionData.oneTimeEmojis = appState.sessionData.oneTimeEmojis.filter(e => e.emoji !== emoji);
+                        }
+
+                        // Remove from selected emojis if selected
+                        appState.sessionData.emojis = appState.sessionData.emojis.filter(e => e.emoji !== emoji);
+
+                        appState.saveDraft();
+
+                        // Re-render emoji grid
+                        this.renderEmojis(mood);
+                    }
+                });
+            }
 
             // Star button handler
             const starBtn = btn.querySelector('.emoji-star-btn');
@@ -2276,7 +2350,10 @@ class UIRenderer {
         grid.appendChild(addCustomBtn);
 
         // Initialize selection badge
-        this.updateEmojiSelectionBadge(appState.sessionData.emojis.length);
+        // Use setTimeout to ensure count is accurate after any updates
+        setTimeout(() => {
+            this.updateEmojiSelectionBadge(appState.sessionData.emojis.length);
+        }, 0);
     }
 
     static renderTriggers(mood) {
@@ -3167,20 +3244,6 @@ async function initApp() {
 
     // Load draft if exists
     const hasDraft = appState.loadDraft();
-    if (hasDraft) {
-        // Show notification that draft was loaded
-        setTimeout(() => {
-            const draftMessage = document.createElement('div');
-            draftMessage.className = 'draft-notification';
-            draftMessage.innerHTML = '📝 Draft loaded - Continue where you left off';
-            document.body.appendChild(draftMessage);
-
-            setTimeout(() => {
-                draftMessage.classList.add('fade-out');
-                setTimeout(() => draftMessage.remove(), 500);
-            }, 3000);
-        }, 1000);
-    }
 
     // Mood Selection
     document.querySelectorAll('.flare-btn').forEach(btn => {
@@ -3322,35 +3385,6 @@ async function initApp() {
     });
 
     // History button
-    document.getElementById('historyBtn').addEventListener('click', () => {
-        UIRenderer.renderHistory();
-        ScreenManager.showModal('settingsModal');
-        // Switch to the history view by clicking the appropriate tab
-        setTimeout(() => {
-            const historyTabContainer = document.querySelector('.settings-tabs');
-            if (historyTabContainer) {
-                const historySection = document.querySelector('.settings-section[data-section="history"]');
-                const allSections = document.querySelectorAll('.settings-section');
-                const allTabs = document.querySelectorAll('.settings-tab');
-
-                // Hide all sections
-                allSections.forEach(s => s.style.display = 'none');
-                // Remove active from all tabs
-                allTabs.forEach(t => t.classList.remove('active'));
-
-                // Show history section
-                if (historySection) {
-                    historySection.style.display = 'block';
-                }
-                // Activate history tab
-                const historyTab = document.querySelector('.settings-tab[data-tab="history"]');
-                if (historyTab) {
-                    historyTab.classList.add('active');
-                }
-            }
-        }, 50);
-    });
-
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => {
         UIRenderer.renderHistory();
@@ -3436,21 +3470,48 @@ async function initApp() {
     setupLinkingHandlers();
 
     // Custom Emojis Management
-    document.getElementById('manageCustomEmojisBtn').addEventListener('click', () => {
+    document.getElementById('manageCustomEmojisBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Disable the add button temporarily to prevent click-through
+        const addBtn = document.getElementById('addCustomEmojiBtn');
+        addBtn.disabled = true;
+        addBtn.style.pointerEvents = 'none';
+
         renderCustomEmojisList();
         ScreenManager.showModal('customEmojisModal');
+
+        // Re-enable after a short delay
+        setTimeout(() => {
+            addBtn.disabled = false;
+            addBtn.style.pointerEvents = 'auto';
+        }, 300);
     });
 
     document.getElementById('closeCustomEmojis').addEventListener('click', () => {
         ScreenManager.hideModal('customEmojisModal');
     });
 
-    document.getElementById('addCustomEmojiBtn').addEventListener('click', () => {
+    document.getElementById('addCustomEmojiBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
         // Reset form
         document.getElementById('selectedEmojiDisplay').textContent = 'Tap to select emoji';
         document.getElementById('selectedEmojiDisplay').dataset.emoji = '';
         document.getElementById('emojiLabelInput').value = '';
         document.querySelectorAll('.emoji-color-cb').forEach(cb => cb.checked = false);
+
+        // Set toggle to ON (permanent) and HIDE it when from manage screen
+        const saveAsPermanent = document.getElementById('saveAsPermanent');
+        saveAsPermanent.checked = true;
+
+        // Hide the toggle section entirely
+        const toggleSection = document.querySelector('#addEmojiModal .form-section:has(#saveAsPermanent)');
+        if (toggleSection) {
+            toggleSection.style.display = 'none';
+        }
 
         ScreenManager.showModal('addEmojiModal');
     });
@@ -3499,17 +3560,52 @@ async function initApp() {
             // Save permanently to custom emojis
             CustomEmojiManager.addCustomEmoji(emoji, label, selectedColors);
             renderCustomEmojisList();
+
+            // Auto-select the emoji (add to selected emojis)
+            const isSelected = appState.sessionData.emojis.some(e => e.emoji === emoji);
+            if (!isSelected) {
+                appState.sessionData.emojis.push({ emoji, label });
+            }
+
+            appState.saveDraft();
+
+            ScreenManager.hideModal('addEmojiModal');
+
+            // Re-render emoji screen to show the newly added and selected emoji
+            const currentMood = appState.sessionData.mood;
+            if (currentMood) {
+                UIRenderer.renderEmojis(currentMood);
+            }
         } else {
-            // One-time use: add directly to current session
-            appState.toggleEmoji(emoji, label);
-        }
+            // One-time use: add to temporary emoji list AND auto-select it
+            const emojiData = { emoji, label, associatedColors: selectedColors };
 
-        ScreenManager.hideModal('addEmojiModal');
+            // Initialize oneTimeEmojis array if it doesn't exist
+            if (!appState.sessionData.oneTimeEmojis) {
+                appState.sessionData.oneTimeEmojis = [];
+            }
 
-        // Re-render emoji screen to show the newly added emoji
-        const currentMood = appState.sessionData.mood;
-        if (currentMood) {
-            UIRenderer.renderEmojis(currentMood);
+            // Check if already in one-time list
+            const exists = appState.sessionData.oneTimeEmojis.some(e => e.emoji === emoji);
+            if (!exists) {
+                appState.sessionData.oneTimeEmojis.push(emojiData);
+            }
+
+            // Auto-select the emoji (add to selected emojis)
+            const isSelected = appState.sessionData.emojis.some(e => e.emoji === emoji);
+            if (!isSelected) {
+                appState.sessionData.emojis.push({ emoji, label });
+            }
+
+            appState.saveDraft();
+
+            ScreenManager.hideModal('addEmojiModal');
+
+            // Re-render emoji screen to show the newly added and selected emoji
+            const currentMood = appState.sessionData.mood;
+            if (currentMood) {
+                UIRenderer.renderEmojis(currentMood);
+            }
         }
     });
 
@@ -3527,6 +3623,7 @@ async function initApp() {
         // Reset form
         document.getElementById('triggerLabelInput').value = '';
         document.querySelectorAll('input[name="triggerCategory"]').forEach(r => r.checked = false);
+        document.querySelectorAll('.trigger-color-cb').forEach(cb => cb.checked = false);
 
         ScreenManager.showModal('addTriggerModal');
     });
@@ -3542,6 +3639,8 @@ async function initApp() {
     document.getElementById('saveCustomTrigger').addEventListener('click', () => {
         const label = document.getElementById('triggerLabelInput').value.trim();
         const categoryInput = document.querySelector('input[name="triggerCategory"]:checked');
+        const selectedColors = Array.from(document.querySelectorAll('.trigger-color-cb:checked'))
+            .map(cb => cb.value);
 
         if (!label) {
             alert('Please enter a trigger/reason');
@@ -3553,10 +3652,21 @@ async function initApp() {
             return;
         }
 
+        if (selectedColors.length === 0) {
+            alert('Please select at least one mood color');
+            return;
+        }
+
         const category = categoryInput.value;
-        CustomTriggerManager.addCustomTrigger(label, category);
+        CustomTriggerManager.addCustomTrigger(label, category, selectedColors);
         ScreenManager.hideModal('addTriggerModal');
         renderCustomTriggersList();
+
+        // Re-render triggers screen if currently on triggers screen
+        const currentMood = appState.sessionData.mood;
+        if (currentMood) {
+            UIRenderer.renderTriggers(currentMood);
+        }
     });
 
     // Customize Label Modal Handlers
@@ -3642,10 +3752,16 @@ function openAddEmojiModalWithMood(mood) {
         moodCheckbox.checked = true;
     }
 
-    // Set toggle to OFF by default (one-time use)
+    // Set toggle to OFF by default (one-time use) and SHOW it when from emoji screen
     const saveAsPermanent = document.getElementById('saveAsPermanent');
     if (saveAsPermanent) {
         saveAsPermanent.checked = false;
+    }
+
+    // Show the toggle section
+    const toggleSection = document.querySelector('#addEmojiModal .form-section:has(#saveAsPermanent)');
+    if (toggleSection) {
+        toggleSection.style.display = 'block';
     }
 
     ScreenManager.showModal('addEmojiModal');
@@ -3654,6 +3770,11 @@ function openAddEmojiModalWithMood(mood) {
 // Helper function to render custom emojis list
 function renderCustomEmojisList() {
     const list = document.getElementById('customEmojisList');
+    if (!list) {
+        console.error('customEmojisList element not found!');
+        return;
+    }
+
     const customEmojis = CustomEmojiManager.getCustomEmojis();
 
     if (customEmojis.length === 0) {
@@ -3693,6 +3814,10 @@ function selectEmoji(emoji) {
     document.getElementById('selectedEmojiDisplay').textContent = emoji;
     document.getElementById('selectedEmojiDisplay').dataset.emoji = emoji;
     ScreenManager.hideModal('emojiPickerModal');
+    // Re-open the Add Emoji modal that was closed
+    setTimeout(() => {
+        ScreenManager.showModal('addEmojiModal');
+    }, 100);
 }
 
 // Helper function to delete custom emoji
@@ -3700,6 +3825,12 @@ function deleteCustomEmoji(id) {
     if (confirm('Are you sure you want to delete this custom emoji?')) {
         CustomEmojiManager.deleteCustomEmoji(id);
         renderCustomEmojisList();
+
+        // Re-render emoji screen if currently on emoji screen
+        const currentMood = appState.sessionData.mood;
+        if (currentMood) {
+            UIRenderer.renderEmojis(currentMood);
+        }
     }
 }
 
@@ -3733,6 +3864,12 @@ function deleteCustomTrigger(id) {
     if (confirm('Are you sure you want to delete this custom trigger?')) {
         CustomTriggerManager.deleteCustomTrigger(id);
         renderCustomTriggersList();
+
+        // Re-render triggers screen if currently on triggers screen
+        const currentMood = appState.sessionData.mood;
+        if (currentMood) {
+            UIRenderer.renderTriggers(currentMood);
+        }
     }
 }
 
