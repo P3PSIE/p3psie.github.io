@@ -900,9 +900,9 @@ class PushNotificationManager {
 
         try {
             const { getToken } = window.firebaseMessagingFunctions;
-            // You'll need to add your VAPID key from Firebase Console > Cloud Messaging
+            // VAPID key from Firebase Console > Cloud Messaging
             const token = await getToken(window.firebaseMessaging, {
-                vapidKey: 'YOUR_VAPID_KEY' // Replace with actual VAPID key
+                vapidKey: 'BOU8F9JyPuKPWQCTbKdmK4tGUria3sceL8YyIdaKP28c53gyQ12g_ODlf7diqfBMxwhpcH6o_zDyoEeAUkqkwrY'
             });
 
             if (token) {
