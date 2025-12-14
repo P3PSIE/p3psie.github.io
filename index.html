@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#8b5cf6">
+    <meta name="description" content="Flares - Track your mood and connect with your support network">
+    <title>Flares - Mood Tracker</title>
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="flares.css">
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- App Configuration (edit config.js to customize) -->
+    <script src="config.js"></script>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase configuration
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, deleteDoc, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAP0mJC-7jDRZzpv4dWT11A7EhSDFbfSo",
+            authDomain: "flare-a0418.firebaseapp.com",
+            projectId: "flare-a0418",
+            storageBucket: "flare-a0418.firebasestorage.app",
+            messagingSenderId: "311211387060",
+            appId: "1:311211387060:web:45f0ca4374d5d449054fe1",
+            measurementId: "G-K65CLNNFGN"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Initialize App Check for bot protection
+        // IMPORTANT: Get your reCAPTCHA site key from Firebase Console > App Check
+        // For now, using debug token in development
+        let appCheck = null;
+        try {
+            // In production, replace with your reCAPTCHA v3 site key
+            const recaptchaSiteKey = '6Ld0PRssAAAAAF7Uet2erNpY3VsQnQLlsGx1uBcx'; // Your reCAPTCHA site key
+
+            // Only enable in production (not localhost)
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                appCheck = initializeAppCheck(app, {
+                    provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+                    isTokenAutoRefreshEnabled: true
+                });
+                console.log('App Check initialized');
+            } else {
+                console.log('App Check disabled for localhost');
+            }
+        } catch (e) {
+            console.warn('App Check initialization failed:', e);
+        }
+
+        // Initialize FCM (messaging)
+        let messaging = null;
+        try {
+            messaging = getMessaging(app);
+        } catch (e) {
+            console.warn('FCM not supported in this browser:', e);
+        }
+
+        // Make Firebase available globally
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.firebaseMessaging = messaging;
+        window.firebaseAuthFunctions = {
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged,
+            updateProfile
+        };
+        window.firebaseDbFunctions = {
+            doc,
+            setDoc,
+            getDoc,
+            collection,
+            addDoc,
+            query,
+            orderBy,
+            limit,
+            getDocs,
+            deleteDoc,
+            where,
+            updateDoc,
+            onSnapshot
+        };
+        window.firebaseMessagingFunctions = {
+            getToken,
+            onMessage
+        };
+
+        // Dispatch event when Firebase is ready
+        window.dispatchEvent(new Event('firebaseReady'));
+    </script>
+
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-content">
+            <img src="assets/icons/mood-green.png" alt="Flare" class="splash-flare splash-flare-1">
+            <img src="assets/icons/mood-orange.png" alt="Flare" class="splash-flare splash-flare-2">
+            <img src="assets/icons/mood-red.png" alt="Flare" class="splash-flare splash-flare-3">
+            <h1 class="splash-title">Flare</h1>
+        </div>
+    </div>
+
+    <div class="stars"></div>
+    <div class="flares-app">
+        <!-- Navigation Header -->
+        <nav class="flares-nav">
+            <div class="nav-container">
+                <div class="nav-spacer"></div>
+                <div class="nav-center">
+                    <h1 class="nav-logo-text">Flare</h1>
+                </div>
+                <div class="nav-actions">
+                    <button class="nav-btn inbox-btn" id="inboxBtn" title="Received Flares" style="display: none;">
+                        <span class="inbox-icon">🔔</span>
+                        <span class="inbox-badge" id="inboxBadge" style="display: none;">0</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Auth Screen: Login/Signup -->
+        <div class="screen active" id="authScreen">
+            <div class="screen-content auth-content">
+                <div class="auth-logo">
+                    <img class="auth-flare-img" src="assets/icons/logo.png" alt="Flares logo">
+                    <p class="auth-tagline">Track your mood. Share with your support network.</p>
+                </div>
+
+                <!-- Login Form -->
+                <div class="auth-form" id="loginForm">
+                    <h2>Welcome Back</h2>
+                    <div class="auth-fields">
+                        <input type="email" id="loginEmail" placeholder="Email" class="input auth-input">
+                        <input type="password" id="loginPassword" placeholder="Password" class="input auth-input">
+                    </div>
+                    <div class="auth-error" id="loginError"></div>
+                    <button class="btn btn-primary auth-btn" id="loginBtn">Sign In</button>
+                    <p class="auth-switch">
+                        Don't have an account?
+                        <button class="btn-link-inline" id="showSignup">Sign Up</button>
+                    </p>
+                </div>
+
+                <!-- Signup Form -->
+                <div class="auth-form" id="signupForm" style="display: none;">
+                    <h2>Create Account</h2>
+                    <div class="auth-fields">
+                        <input type="text" id="signupName" placeholder="Display Name" class="input auth-input">
+                        <input type="email" id="signupEmail" placeholder="Email" class="input auth-input">
+                        <input type="password" id="signupPassword" placeholder="Password (min 6 characters)" class="input auth-input">
+                        <input type="password" id="signupConfirm" placeholder="Confirm Password" class="input auth-input">
+                    </div>
+                    <div class="auth-error" id="signupError"></div>
+                    <button class="btn btn-primary auth-btn" id="signupBtn">Create Account</button>
+                    <p class="auth-switch">
+                        Already have an account?
+                        <button class="btn-link-inline" id="showLogin">Sign In</button>
+                    </p>
+                </div>
+
+                <!-- Continue without account -->
+                <div class="auth-skip">
+                    <hr>
+                    <button class="btn btn-tertiary" id="skipAuthBtn">Continue without account</button>
+                    <p class="auth-skip-note">Your data will only be saved locally on this device</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Button (Top Left) -->
+        <button class="info-btn" id="infoBtn" title="About Flares">ⓘ</button>
+
+        <!-- Settings Button -->
+        <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+
+        <!-- Emoji Label Tooltip -->
+        <div class="emoji-tooltip" id="emojiTooltip" style="display: none;">
+            <div class="emoji-tooltip-content">
+                <span class="emoji-tooltip-emoji" id="tooltipEmoji"></span>
+                <span class="emoji-tooltip-label" id="tooltipLabel"></span>
+            </div>
+        </div>
+
+        <!-- Screen 1: Mood Selection (Flares) -->
+        <div class="screen" id="moodScreen">
+            <div class="screen-content">
+                <div class="flares-container">
+                    <button class="flare-btn green" data-mood="green">
+                        <img class="flare-icon" src="assets/icons/mood-green.png" alt="Green flare">
+                    </button>
+
+                    <button class="flare-btn orange" data-mood="orange">
+                        <img class="flare-icon" src="assets/icons/mood-orange.png" alt="Orange flare">
+                    </button>
+
+                    <button class="flare-btn red" data-mood="red">
+                        <img class="flare-icon" src="assets/icons/mood-red.png" alt="Red flare">
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 2: Emoji Selection -->
+        <div class="screen" id="emojiScreen">
+            <div class="screen-content">
+                <h1 class="screen-title">What describes your mood?</h1>
+                <p class="screen-subtitle">
+                    Select one or more emotions
+                    <span class="selection-badge" id="emojiSelectionBadge" style="display: none;">0 selected</span>
+                </p>
+
+                <div class="emoji-grid" id="emojiGrid">
+                    <!-- Populated dynamically based on mood -->
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-secondary" id="backToMood">Back</button>
+                    <button class="btn btn-primary" id="continueToTriggers">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 3: Triggers Selection -->
+        <div class="screen" id="triggersScreen">
+            <div class="screen-content">
+                <h1 class="screen-title">What might have contributed?</h1>
+                <p class="screen-subtitle">Select any relevant triggers (optional)</p>
+
+                <div class="triggers-grid" id="triggersGrid">
+                    <!-- Populated dynamically based on mood -->
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-secondary" id="backToEmoji">Back</button>
+                    <button class="btn btn-primary" id="continueToPreview">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 4: Notification Preview & Send -->
+        <div class="screen" id="previewScreen">
+            <div class="screen-content">
+                <h1 class="screen-title">Ready to share</h1>
+                <p class="screen-subtitle">Review and send to your support network</p>
+
+                <div class="notification-preview" id="notificationPreview">
+                    <!-- Preview populated dynamically -->
+                </div>
+
+                <div class="message-section">
+                    <label class="message-label" for="flareMessage">Add a message (optional)</label>
+                    <textarea
+                        id="flareMessage"
+                        class="input message-input"
+                        placeholder="Write a personal note to include with your flare..."
+                        maxlength="200"
+                        rows="3"
+                    ></textarea>
+                    <span class="message-counter"><span id="messageCharCount">0</span>/200</span>
+                </div>
+
+                <div class="contacts-section" id="contactsSection" style="display: none;">
+                    <div class="contacts-header">
+                        <h4>Send to contacts</h4>
+                        <span class="contacts-count" id="contactsCount">0 of 0 active</span>
+                    </div>
+                    <div id="contactsList" class="contacts-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-secondary" id="backToTriggers">Back</button>
+                    <button class="btn btn-primary" id="sendToLinked" style="display: none;">Send Flare</button>
+                    <button class="btn btn-primary" id="sendViaSMS">Send via SMS</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inbox Screen: Received Flares -->
+        <div class="screen" id="inboxScreen">
+            <div class="screen-content">
+                <h1 class="screen-title">Received Flares</h1>
+                <p class="screen-subtitle">Updates from your connections</p>
+
+                <div class="inbox-list" id="inboxList">
+                    <!-- Received flares populated dynamically -->
+                    <div class="empty-state" id="inboxEmptyState">
+                        <div class="empty-icon">📭</div>
+                        <p>No flares received yet</p>
+                        <p class="help-text">When your connections send you updates, they'll appear here</p>
+                    </div>
+                </div>
+
+                <div class="screen-actions">
+                    <button class="btn btn-secondary" id="backFromInbox">Back</button>
+                    <button class="btn btn-tertiary" id="markAllReadBtn">Mark All Read</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button class="modal-close" id="closeSettings">×</button>
+                </div>
+                <div class="modal-body">
+                    <!-- User Profile Section -->
+                    <div class="user-profile-section" id="userProfileSection" style="display: none;">
+                        <div class="user-profile-card" id="userProfileCard">
+                            <div class="user-avatar-container">
+                                <div class="user-avatar" id="userAvatar">U</div>
+                                <img class="user-avatar-img" id="userAvatarImg" style="display: none;" alt="Profile">
+                                <button class="edit-avatar-btn" id="editProfileBtn" title="Edit Profile">✏️</button>
+                            </div>
+                            <div class="user-info">
+                                <div class="user-name" id="userName">User</div>
+                                <div class="user-email" id="userEmail">user@example.com</div>
+                            </div>
+                            <div class="sync-status" id="syncStatus">
+                                <span class="sync-icon">☁️</span>
+                                <span class="sync-text">Synced</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-logout" id="logoutBtn">Sign Out</button>
+                    </div>
+
+                    <div class="guest-mode-notice" id="guestModeNotice" style="display: none;">
+                        <p class="guest-notice-text">You're using Flares without an account. Your data is only saved on this device.</p>
+                        <button class="btn btn-primary btn-small" id="createAccountBtn">Create Account to Sync</button>
+                    </div>
+
+                    <hr>
+
+                    <!-- Linked Contacts Section (Push Notifications) -->
+                    <div class="linked-contacts-section" id="linkedContactsSection" style="display: none;">
+                        <h3>Contacts</h3>
+                        <p class="help-text">Connect with people who have Flares to send instant push notifications</p>
+
+                        <div class="link-actions">
+                            <button class="btn btn-primary" id="generateLinkCodeBtn">Generate My Code</button>
+                            <button class="btn btn-secondary" id="enterLinkCodeBtn">Enter a Code</button>
+                        </div>
+
+                        <div class="linked-contacts-list" id="linkedContactsList">
+                            <!-- Linked contacts populated dynamically -->
+                        </div>
+
+                        <hr>
+                    </div>
+
+                    <!-- Notification Settings Section -->
+                    <div class="notification-settings-section">
+                        <h3>Notifications</h3>
+                        <p class="help-text">Enable push notifications to receive Flares instantly</p>
+
+                        <div class="notification-status" id="notificationStatus">
+                            <div class="status-indicator">
+                                <span class="status-icon" id="notificationStatusIcon">🔕</span>
+                                <span class="status-text" id="notificationStatusText">Not enabled</span>
+                            </div>
+                            <button class="btn btn-primary" id="enableNotificationsBtn">Enable Notifications</button>
+                            <button class="btn btn-secondary" id="checkNotificationsBtn" style="display: none;">Check Permission</button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h3>Customization</h3>
+                    <div class="customization-buttons">
+                        <button class="btn btn-secondary" id="manageCustomEmojisBtn">Manage Custom Emojis</button>
+                        <button class="btn btn-secondary" id="manageCustomTriggersBtn">Manage Custom Triggers</button>
+                    </div>
+
+                    <hr>
+
+                    <h3>Your History</h3>
+
+                    <div class="history-tabs">
+                        <button class="history-tab active" data-tab="sent">Sent</button>
+                        <button class="history-tab" data-tab="received">Received</button>
+                    </div>
+
+                    <div class="history-list" id="historyList">
+                        <!-- History populated dynamically -->
+                    </div>
+
+                    <div class="history-actions">
+                        <button class="btn btn-link" id="clearSentBtn">Clear Sent</button>
+                        <button class="btn btn-link" id="clearReceivedBtn">Clear Received</button>
+                        <button class="btn btn-link" id="clearHistoryBtn">Clear All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Emojis Modal -->
+        <div class="modal" id="customEmojisModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Custom Emojis</h2>
+                    <button class="modal-close" id="closeCustomEmojis">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Create custom emoji feelings that match your experiences</p>
+
+                    <div class="custom-emojis-list" id="customEmojisList">
+                        <!-- Custom emojis populated dynamically -->
+                    </div>
+
+                    <button class="btn btn-primary" id="addCustomEmojiBtn">+ Add Custom Emoji</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Custom Emoji Modal -->
+        <div class="modal" id="addEmojiModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add Custom Emoji</h2>
+                    <button class="modal-close" id="closeAddEmoji">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-section">
+                        <label>Emoji</label>
+                        <button class="emoji-picker-btn" id="emojiPickerBtn">
+                            <span id="selectedEmojiDisplay">Tap to select emoji</span>
+                        </button>
+                    </div>
+
+                    <div class="form-section">
+                        <label>Feeling/Emotion Label</label>
+                        <input type="text" id="emojiLabelInput" placeholder="e.g., Anxious, Happy, Tired" class="input">
+                    </div>
+
+                    <div class="form-section">
+                        <label>Associated Mood Colors</label>
+                        <p class="help-text small">Select which traffic light colors this feeling applies to</p>
+                        <div class="color-checkboxes">
+                            <label class="color-checkbox green">
+                                <input type="checkbox" value="green" class="emoji-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Stable</span>
+                            </label>
+                            <label class="color-checkbox orange">
+                                <input type="checkbox" value="orange" class="emoji-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Struggling</span>
+                            </label>
+                            <label class="color-checkbox red">
+                                <input type="checkbox" value="red" class="emoji-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Overwhelmed</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="saveAsPermanent" class="toggle-checkbox">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-text">Save as permanent custom emoji</span>
+                        </label>
+                        <p class="help-text small">Turn off to use this emoji just once for this flare</p>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelAddEmoji">Cancel</button>
+                        <button class="btn btn-primary" id="saveCustomEmoji">Add Emoji</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emoji Picker Modal -->
+        <div class="modal" id="emojiPickerModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Select Emoji</h2>
+                    <button class="modal-close" id="closeEmojiPicker">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="emoji-picker-grid" id="emojiPickerGrid">
+                        <!-- Emoji picker populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Triggers Modal -->
+        <div class="modal" id="customTriggersModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Custom Triggers</h2>
+                    <button class="modal-close" id="closeCustomTriggers">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Create custom triggers specific to your experiences</p>
+
+                    <div class="custom-triggers-list" id="customTriggersList">
+                        <!-- Custom triggers populated dynamically -->
+                    </div>
+
+                    <button class="btn btn-primary" id="addCustomTriggerBtn">+ Add Custom Trigger</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Custom Trigger Modal -->
+        <div class="modal" id="addTriggerModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add Custom Trigger</h2>
+                    <button class="modal-close" id="closeAddTrigger">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-section">
+                        <label>Trigger/Reason</label>
+                        <input type="text" id="triggerLabelInput" placeholder="e.g., Bright fluorescent lights" class="input">
+                    </div>
+
+                    <div class="form-section">
+                        <label>Category</label>
+                        <p class="help-text small">Choose which category this trigger belongs to</p>
+                        <div class="category-radios">
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="sensory">
+                                <span class="category-icon">👂</span>
+                                <span>Sensory</span>
+                            </label>
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="physical">
+                                <span class="category-icon">🏃</span>
+                                <span>Physical</span>
+                            </label>
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="emotional">
+                                <span class="category-icon">❤️</span>
+                                <span>Emotional</span>
+                            </label>
+                            <label class="category-radio">
+                                <input type="radio" name="triggerCategory" value="cognitive">
+                                <span class="category-icon">🧠</span>
+                                <span>Cognitive</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label>Associated Mood Colors</label>
+                        <p class="help-text small">Select which moods this trigger applies to</p>
+                        <div class="color-checkboxes">
+                            <label class="color-checkbox green">
+                                <input type="checkbox" value="green" class="trigger-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Stable</span>
+                            </label>
+                            <label class="color-checkbox orange">
+                                <input type="checkbox" value="orange" class="trigger-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Struggling</span>
+                            </label>
+                            <label class="color-checkbox red">
+                                <input type="checkbox" value="red" class="trigger-color-cb">
+                                <span class="color-indicator"></span>
+                                <span>Overwhelmed</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelAddTrigger">Cancel</button>
+                        <button class="btn btn-primary" id="saveCustomTrigger">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customize Label Modal -->
+        <div class="modal" id="customizeLabelModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Customize Label</h2>
+                    <button class="modal-close" id="closeCustomizeLabel">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Personalize this label to better match your experience</p>
+                    <div class="customize-preview">
+                        <span class="customize-preview-icon" id="customizePreviewIcon">😊</span>
+                        <span class="customize-preview-label" id="customizePreviewLabel">Happy</span>
+                    </div>
+                    <div class="form-section">
+                        <label>Custom Label</label>
+                        <input type="text" id="customLabelInput" class="input" placeholder="Enter your custom label" maxlength="50">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelCustomizeLabel">Cancel</button>
+                        <button class="btn btn-tertiary" id="resetCustomLabel">Reset to Default</button>
+                        <button class="btn btn-primary" id="saveCustomLabel">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Modal -->
+        <div class="modal" id="infoModal">
+            <div class="modal-content tutorial-style">
+                <div class="modal-header">
+                    <h2>About Flares</h2>
+                    <button class="modal-close" id="closeInfo">×</button>
+                </div>
+                <div class="modal-body tutorial-body">
+                    <p class="tutorial-intro">Quickly communicate how you're feeling to your support network</p>
+
+                    <div class="tutorial-section">
+                        <div class="tutorial-item">
+                            <div class="tutorial-icon green-glow">✦</div>
+                            <div class="tutorial-content">
+                                <h3>I'm Okay</h3>
+                                <p>Feeling calm, regulated, and able to engage</p>
+                            </div>
+                        </div>
+
+                        <div class="tutorial-item">
+                            <div class="tutorial-icon orange-glow">✦</div>
+                            <div class="tutorial-content">
+                                <h3>I'm Struggling</h3>
+                                <p>Feeling stressed or finding things difficult</p>
+                            </div>
+                        </div>
+
+                        <div class="tutorial-item">
+                            <div class="tutorial-icon red-glow">✦</div>
+                            <div class="tutorial-content">
+                                <h3>I'm Overwhelmed</h3>
+                                <p>Feeling unable to cope or need support</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-section">
+                        <div class="tutorial-item">
+                            <div class="tutorial-icon-small">📝</div>
+                            <div class="tutorial-content">
+                                <h3>How to Send a Flare</h3>
+                                <p>Select your mood, pick emotions and triggers (optional), add a message, then send to your support network</p>
+                            </div>
+                        </div>
+
+                        <div class="tutorial-item">
+                            <div class="tutorial-icon-small">⭐</div>
+                            <div class="tutorial-content">
+                                <h3>Favorites & Customization</h3>
+                                <p>Star emojis and triggers to sort them to the top. Long-press to customize labels</p>
+                            </div>
+                        </div>
+
+                        <div class="tutorial-item">
+                            <div class="tutorial-icon-small">🔗</div>
+                            <div class="tutorial-content">
+                                <h3>Link with Contacts</h3>
+                                <p>Generate a link code in Settings to connect with trusted friends, family, or therapists</p>
+                            </div>
+                        </div>
+
+                        <div class="tutorial-item">
+                            <div class="tutorial-icon-small">📥</div>
+                            <div class="tutorial-content">
+                                <h3>Receive Support</h3>
+                                <p>Check your inbox to see when contacts send you flares and reach out to them</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div class="modal" id="successModal">
+            <div class="modal-content success">
+                <div class="success-icon">✓</div>
+                <h2>Notification Sent!</h2>
+                <p>Your support network has been notified.</p>
+                <button class="btn btn-primary" id="doneBtn">Done</button>
+            </div>
+        </div>
+
+        <!-- Generate Link Code Modal -->
+        <div class="modal" id="generateCodeModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Your Link Code</h2>
+                    <button class="modal-close" id="closeGenerateCode">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Share this code with someone you want to connect with. They can enter it in their Flares app.</p>
+                    <div class="link-code-display" id="linkCodeDisplay">
+                        <span class="link-code">------</span>
+                    </div>
+                    <div class="qr-code-container" id="qrCodeContainer" style="display: none;">
+                        <div id="qrCodeDiv"></div>
+                        <p class="qr-code-label">Scan to connect</p>
+                    </div>
+                    <p class="link-code-expiry" id="linkCodeExpiry">Expires in 10 minutes</p>
+                    <button class="btn btn-primary" id="copyCodeBtn">Copy Code</button>
+                    <p class="help-text small">Once they enter this code, you'll be able to send each other Flare notifications instantly.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enter Link Code Modal -->
+        <div class="modal" id="enterCodeModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Enter Link Code</h2>
+                    <button class="modal-close" id="closeEnterCode">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="help-text">Enter the 6-digit code from someone you want to connect with.</p>
+                    <div class="form-section">
+                        <input type="text" id="linkCodeInput" placeholder="Enter 6-digit code" class="input link-code-input" maxlength="6" pattern="[0-9]*" inputmode="numeric">
+                    </div>
+                    <div class="link-code-error" id="linkCodeError"></div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelEnterCode">Cancel</button>
+                        <button class="btn btn-primary" id="submitLinkCode">Link</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Modal -->
+        <div class="modal" id="editProfileModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit Profile</h2>
+                    <button class="modal-close" id="closeEditProfile">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="profile-edit-avatar-section">
+                        <div class="profile-edit-avatar-container">
+                            <div class="profile-edit-avatar" id="profileEditAvatar">U</div>
+                            <img class="profile-edit-avatar-img" id="profileEditAvatarImg" style="display: none;" alt="Profile">
+                        </div>
+                        <div class="profile-edit-avatar-actions">
+                            <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
+                            <button class="btn btn-secondary btn-small" id="uploadAvatarBtn">Upload Photo</button>
+                            <button class="btn btn-tertiary btn-small" id="removeAvatarBtn" style="display: none;">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label" for="editDisplayName">Display Name</label>
+                        <input type="text" id="editDisplayName" placeholder="Your name" class="input">
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label" for="editEmail">Email</label>
+                        <input type="email" id="editEmail" class="input" disabled>
+                        <p class="help-text small">Email cannot be changed</p>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label" for="editPhone">Phone Number (Optional)</label>
+                        <input type="tel" id="editPhone" placeholder="(555) 123-4567" class="input">
+                        <p class="help-text small">For SMS fallback notifications</p>
+                    </div>
+
+                    <div class="profile-edit-error" id="profileEditError"></div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="cancelEditProfile">Cancel</button>
+                        <button class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Welcome/Onboarding Modal -->
+        <div class="modal" id="welcomeModal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>Welcome to Flares! 🎉</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="welcome-content">
+                        <p class="welcome-intro">
+                            Flares helps you quickly communicate how you're feeling to your support network.
+                            Let's get you set up in just a few steps.
+                        </p>
+
+                        <div class="onboarding-steps">
+                            <div class="onboarding-step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h3>Set up your profile</h3>
+                                    <p>Add your name and photo so contacts recognize you</p>
+                                </div>
+                            </div>
+
+                            <div class="onboarding-step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h3>Link with your support network</h3>
+                                    <p>Connect with friends, family, or therapists who want to support you</p>
+                                </div>
+                            </div>
+
+                            <div class="onboarding-step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h3>Send a flare when you need support</h3>
+                                    <p>Choose your mood, select emojis and triggers, and send to your contacts</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mood-preview">
+                            <h4>How Flares Work:</h4>
+                            <div class="mood-examples">
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-green.png" alt="Green flare" class="mood-example-icon">
+                                    <span>I'm Okay - Stable and doing well</span>
+                                </div>
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-orange.png" alt="Orange flare" class="mood-example-icon">
+                                    <span>I'm Struggling - Starting to have difficulty</span>
+                                </div>
+                                <div class="mood-example">
+                                    <img src="assets/icons/mood-red.png" alt="Red flare" class="mood-example-icon">
+                                    <span>I'm Overwhelmed - Need support now</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="skipWelcome">Skip for Now</button>
+                        <button class="btn btn-primary" id="setupProfile">Set Up Profile</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="flares.js"></script>
+</body>
+</html>
